@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7A52D3BD1FFD94A700479683 /* AccessPointsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A52D3BC1FFD94A700479683 /* AccessPointsController.m */; };
+		7AC4BC7E1FFA5C9C00AE7C8E /* BagController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AC4BC7D1FFA5C9C00AE7C8E /* BagController.m */; };
+		7AC4BC811FFAC9D700AE7C8E /* BagTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AC4BC801FFAC9D700AE7C8E /* BagTableViewCell.m */; };
 		7AD760AA1FF6D07A00AB0541 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AD760A91FF6D07A00AB0541 /* AppDelegate.m */; };
 		7AD760AD1FF6D07A00AB0541 /* FirstViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AD760AC1FF6D07A00AB0541 /* FirstViewController.m */; };
 		7AD760B01FF6D07A00AB0541 /* SecondViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AD760AF1FF6D07A00AB0541 /* SecondViewController.m */; };
@@ -14,9 +17,18 @@
 		7AD760B51FF6D07A00AB0541 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7AD760B41FF6D07A00AB0541 /* Assets.xcassets */; };
 		7AD760B81FF6D07A00AB0541 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7AD760B61FF6D07A00AB0541 /* LaunchScreen.storyboard */; };
 		7AD760BB1FF6D07A00AB0541 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AD760BA1FF6D07A00AB0541 /* main.m */; };
+		7AD760C41FF6D11F00AB0541 /* BLE.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AD760C21FF6D11F00AB0541 /* BLE.m */; };
+		7AE137921FFFF72D00BACB04 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AE137911FFFF72D00BACB04 /* SystemConfiguration.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		7A20A8FA1FFAD7AA009DA389 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
+		7A52D3BB1FFD94A700479683 /* AccessPointsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AccessPointsController.h; sourceTree = "<group>"; };
+		7A52D3BC1FFD94A700479683 /* AccessPointsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AccessPointsController.m; sourceTree = "<group>"; };
+		7AC4BC7C1FFA5C9C00AE7C8E /* BagController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BagController.h; sourceTree = "<group>"; };
+		7AC4BC7D1FFA5C9C00AE7C8E /* BagController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BagController.m; sourceTree = "<group>"; };
+		7AC4BC7F1FFAC9D700AE7C8E /* BagTableViewCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BagTableViewCell.h; sourceTree = "<group>"; };
+		7AC4BC801FFAC9D700AE7C8E /* BagTableViewCell.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BagTableViewCell.m; sourceTree = "<group>"; };
 		7AD760A51FF6D07A00AB0541 /* Odin BLE Tester.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Odin BLE Tester.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AD760A81FF6D07A00AB0541 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		7AD760A91FF6D07A00AB0541 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -29,6 +41,10 @@
 		7AD760B71FF6D07A00AB0541 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		7AD760B91FF6D07A00AB0541 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7AD760BA1FF6D07A00AB0541 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		7AD760C11FF6D11E00AB0541 /* BLEDefines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BLEDefines.h; sourceTree = "<group>"; };
+		7AD760C21FF6D11F00AB0541 /* BLE.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BLE.m; sourceTree = "<group>"; };
+		7AD760C31FF6D11F00AB0541 /* BLE.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BLE.h; sourceTree = "<group>"; };
+		7AE137911FFFF72D00BACB04 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -36,17 +52,28 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7AE137921FFFF72D00BACB04 /* SystemConfiguration.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7A20A8F91FFAD7AA009DA389 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				7AE137911FFFF72D00BACB04 /* SystemConfiguration.framework */,
+				7A20A8FA1FFAD7AA009DA389 /* CoreBluetooth.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		7AD7609C1FF6D07A00AB0541 = {
 			isa = PBXGroup;
 			children = (
 				7AD760A71FF6D07A00AB0541 /* Odin BLE Tester */,
 				7AD760A61FF6D07A00AB0541 /* Products */,
+				7A20A8F91FFAD7AA009DA389 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -67,13 +94,30 @@
 				7AD760AC1FF6D07A00AB0541 /* FirstViewController.m */,
 				7AD760AE1FF6D07A00AB0541 /* SecondViewController.h */,
 				7AD760AF1FF6D07A00AB0541 /* SecondViewController.m */,
+				7AD760C51FF6D12900AB0541 /* RB_BLE */,
 				7AD760B11FF6D07A00AB0541 /* Main.storyboard */,
+				7A52D3BB1FFD94A700479683 /* AccessPointsController.h */,
+				7A52D3BC1FFD94A700479683 /* AccessPointsController.m */,
+				7AC4BC7C1FFA5C9C00AE7C8E /* BagController.h */,
+				7AC4BC7D1FFA5C9C00AE7C8E /* BagController.m */,
+				7AC4BC7F1FFAC9D700AE7C8E /* BagTableViewCell.h */,
+				7AC4BC801FFAC9D700AE7C8E /* BagTableViewCell.m */,
 				7AD760B41FF6D07A00AB0541 /* Assets.xcassets */,
 				7AD760B61FF6D07A00AB0541 /* LaunchScreen.storyboard */,
 				7AD760B91FF6D07A00AB0541 /* Info.plist */,
 				7AD760BA1FF6D07A00AB0541 /* main.m */,
 			);
 			path = "Odin BLE Tester";
+			sourceTree = "<group>";
+		};
+		7AD760C51FF6D12900AB0541 /* RB_BLE */ = {
+			isa = PBXGroup;
+			children = (
+				7AD760C31FF6D11F00AB0541 /* BLE.h */,
+				7AD760C21FF6D11F00AB0541 /* BLE.m */,
+				7AD760C11FF6D11E00AB0541 /* BLEDefines.h */,
+			);
+			path = RB_BLE;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -108,6 +152,11 @@
 					7AD760A41FF6D07A00AB0541 = {
 						CreatedOnToolsVersion = 9.2;
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -147,10 +196,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7AC4BC7E1FFA5C9C00AE7C8E /* BagController.m in Sources */,
 				7AD760B01FF6D07A00AB0541 /* SecondViewController.m in Sources */,
 				7AD760AA1FF6D07A00AB0541 /* AppDelegate.m in Sources */,
 				7AD760BB1FF6D07A00AB0541 /* main.m in Sources */,
+				7AD760C41FF6D11F00AB0541 /* BLE.m in Sources */,
 				7AD760AD1FF6D07A00AB0541 /* FirstViewController.m in Sources */,
+				7A52D3BD1FFD94A700479683 /* AccessPointsController.m in Sources */,
+				7AC4BC811FFAC9D700AE7C8E /* BagTableViewCell.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,7 +277,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -273,7 +326,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
