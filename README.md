@@ -4,26 +4,19 @@ This README would normally document whatever steps are necessary to get your app
 
 ### What is this repository for? ###
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* Example iOS application to talk to Duo-based reader via BLE.
+* 0.1.0
 
 ### How do I get set up? ###
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+* Everything should just work in Xcode. No need for external libs or frameworks.
+* How to run tests - TODO
 
 ### Contribution guidelines ###
 
-* Writing tests
-* Code review
-* Other guidelines
+* Code is not "pretty" so fix as you see fit.
 
 ### Who do I talk to? ###
 
-* Repo owner or admin
-* Other community or team contact
+* steven at envisas dot co
+* Greenhouse Interactive
