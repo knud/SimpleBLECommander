@@ -8,9 +8,9 @@
 
 #import "AccessPointsController.h"
 #import <SystemConfiguration/CaptiveNetwork.h>
-
-
+#import "PickerView.h"
 #import "BLEDefines.h"
+#import "EnvisasSupport/EnvisasAccessPointSecurity.h"
 
 @interface AccessPointsController ()
 
@@ -21,8 +21,8 @@
 @synthesize ble;
 @synthesize peripheral;
 @synthesize service;
-@synthesize accessPoints;
 
+NSMutableArray<NSString *> *accessPoints;
 NSMutableData *bleReceiverBuffer;
 bool recStartFound = false;
 bool recEndFound = false;;
@@ -38,6 +38,11 @@ bool haveRx = false;
   ble.delegate = self;
   
   bleReceiverBuffer=[[NSMutableData alloc] init];
+  accessPoints = [[NSMutableArray<NSString *> alloc] init];
+
+  UIBarButtonItem *addAPButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addAcessPoint:)];
+  [self navigationItem].rightBarButtonItem = addAPButton;
+  [self navigationItem].title = @"Access Points";
 
   if (ble.activePeripheral)
   {
@@ -79,18 +84,32 @@ bool haveRx = false;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+  NSLog(@"%lu rows in table",(unsigned long)[accessPoints count]);
   return [accessPoints count];
 }
 
-/*
- - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
- UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:<#@"reuseIdentifier"#> forIndexPath:indexPath];
- 
- // Configure the cell...
- 
- return cell;
- }
- */
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+  
+  NSLog(@"cellforRowAt...");
+  static NSString *cellIdentifier = @"APCell";
+  
+  UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier forIndexPath:indexPath];
+  
+  if (cell == nil) {
+    cell = [[UITableViewCell alloc]
+            initWithStyle:UITableViewCellStyleDefault
+            reuseIdentifier:cellIdentifier];
+  }
+  
+  NSString *ap = [accessPoints objectAtIndex:indexPath.row];
+  
+  [cell.textLabel setText:ap];
+  [cell.detailTextLabel setText:@"could put something here..."];
+
+  return cell;
+}
+
 
 /*
  // Override to support conditional editing of the table view.
@@ -126,6 +145,59 @@ bool haveRx = false;
  }
  */
 
+#pragma mark - UI actions
+
+- (IBAction)addAcessPoint:(id)sender {
+  NSLog(@"addAcessPoint");
+
+  // Always present the connected access point
+  NSMutableArray *ssids = [[NSMutableArray alloc] initWithObjects:[self getConnectedAccessPoint], nil];
+
+  // Pretend we somehow know some other APs...
+  [ssids addObject:@"fooAP"];
+  [ssids addObject:@"barAP"];
+  [ssids addObject:@"01234567890123456789012345678932"];
+
+  [PickerView showPickerWithOptions:ssids title:@"Select Access Point" selectionBlock:^(NSString *accessPointName) {
+    NSLog(@"Selected Access Point : %@",accessPointName);
+    if (self.presentedViewController != nil)
+      [self.presentedViewController dismissViewControllerAnimated:true completion:nil];
+    [self accessPointPassword:accessPointName];
+  }];
+}
+
+-(void) accessPointPassword:(NSString *) ap {
+  NSString *title = [@"Password for " stringByAppendingString:ap];
+  UIAlertController * alertController = [UIAlertController alertControllerWithTitle: title
+                                                                            message: @"Enter Password"
+                                                                     preferredStyle:UIAlertControllerStyleAlert];
+  [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+    textField.placeholder = @"password";
+    textField.textColor = [UIColor blueColor];
+    textField.clearButtonMode = UITextFieldViewModeWhileEditing;
+    textField.borderStyle = UITextBorderStyleRoundedRect;
+    textField.secureTextEntry = YES;
+  }];
+  UIAlertAction *cancelAction = [UIAlertAction
+                                 actionWithTitle:NSLocalizedString(@"Cancel", @"Cancel action")
+                                 style:UIAlertActionStyleCancel
+                                 handler:^(UIAlertAction *action)
+                                 {
+                                   NSLog(@"Cancel action");
+                                 }];
+  UIAlertAction *okayAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    NSArray * textfields = alertController.textFields;
+    UITextField * passwordfield = textfields[0];
+    NSLog(@"%@",passwordfield.text);
+    if ([passwordfield.text length] > 0)
+      [self addReaderAP:ap password:passwordfield.text];
+  }];
+  
+  [alertController addAction:cancelAction];
+  [alertController addAction:okayAction];
+  [self presentViewController:alertController animated:YES completion:nil];
+}
+
 #pragma mark - Access Points Support
 
 // TODO this is not robust; purely happy path
@@ -139,6 +211,50 @@ bool haveRx = false;
   //  NSLog(@"connected SSID is %@",ssid);
   return ssid;
 }
+
+- (void) addReaderAP:(NSString *) ap password:(NSString *) password {
+  if (haveTx)
+  {
+    // +--ID--+-Arg Len-+-Arg Data-------------------------------------------+
+    // | 0x21 | 063     | home | ssid | auth | pwd                           |
+    // +------+---------+----------------------------------------------------+
+    // | 1 B  | 3 C     | 1 B  | 32 B | 1 B  | 63 B                          |
+    // +------+---------+----------------------------------------------------+
+    //
+    // home is not true (i.e, not set to 1)
+    unsigned char addAccessPointCommand[5] = {0x21, 0x30, 0x36, 0x31, 0xFF};
+    NSMutableData *AAPCmd = [NSMutableData dataWithBytes:addAccessPointCommand length:sizeof(addAccessPointCommand)];
+    // since the ap string was selected using APs detected by the device, they cannot be too long (> 32 chars)
+    unsigned long padding = 32 - [ap length];
+    NSLog(@"padding is %lu blanks",padding);
+    if (padding > 0) {
+      NSString *temp = [[NSString string] stringByPaddingToLength:padding withString:@" " startingAtIndex:0];
+      ap = [ap stringByAppendingString:temp];
+    }
+    NSData *apData = [ap dataUsingEncoding:NSUTF8StringEncoding];
+//    apData = [apData subdataWithRange:NSMakeRange(0, [apData length] - 1)];
+    [AAPCmd appendData:apData];
+    NSLog(@"AAPCmd length is %lu",(unsigned long)[AAPCmd length]);
+
+    uint8_t auth[1] = {ENVISAS_ACCESS_POINT_SECURITY_WPA2_MIXED_PSK};
+    [AAPCmd appendBytes:auth length:1];
+    NSLog(@"AAPCmd length is %lu",(unsigned long)[AAPCmd length]);
+    
+    padding = 63 - [password length];
+    NSLog(@"padding is %lu blanks",padding);
+    if (padding > 0) {
+      NSString *temp = [[NSString string] stringByPaddingToLength:padding withString:@" " startingAtIndex:0];
+      password = [password stringByAppendingString:temp];
+    }
+    [AAPCmd appendData:[password dataUsingEncoding:NSUTF8StringEncoding]];
+    NSLog(@"AAPCmd length is %lu",(unsigned long)[AAPCmd length]);
+    uint8_t *dataBytes = (uint8_t *)[AAPCmd bytes];
+    for (int i = 0; i < [AAPCmd length]; i++)
+      printf("%02x\n",dataBytes[i]);
+    [self.ble write:AAPCmd];
+  }
+}
+
 /*
  #pragma mark - Navigation
  
@@ -248,22 +364,68 @@ bool haveRx = false;
     if (recStartFound)
     {
       [bleReceiverBuffer appendBytes:data length:length];
-      NSString *rec = [NSString stringWithUTF8String:[bleReceiverBuffer bytes]];
+//      NSString *rec = [NSString stringWithUTF8String:[bleReceiverBuffer bytes]];
+      NSString *rec  = [[NSString alloc] initWithBytes:[bleReceiverBuffer bytes] length:[bleReceiverBuffer length] encoding:NSUTF8StringEncoding];
+      NSLog(@"rec length = %lu",(unsigned long)[rec length]);
       if ([rec rangeOfString:@"}"].location == NSNotFound)
         NSLog(@"} NOT FOUND");
       else
       {
         NSLog(@"} found");
         NSLog(@"rec = %@",rec);
-        [self parseLAPResponse:rec];
+        NSLog(@"--------------------");
+        
+        NSData *recData = [NSData dataWithBytes:[bleReceiverBuffer bytes] length:[bleReceiverBuffer length]];
+        [self parseLAPResponse:recData];
+        recStartFound = false;
       }
     }
 
 }
 
-- (void) parseLAPResponse:(NSString *)response
+- (void) parseLAPResponse:(NSData *)response
 {
-  
+//  NSDictionary *lapRespDict = (NSDictionary*) [NSKeyedUnarchiver unarchiveObjectWithData:response];
+
+  NSError *error;
+  NSDictionary *lapRespDict = [NSJSONSerialization JSONObjectWithData:response options:kNilOptions error:&error];
+  if (error)
+  {
+    NSLog(@"LAP response is not JSON");
+  }
+  else {
+    if ([NSJSONSerialization isValidJSONObject:lapRespDict])
+    {
+      NSLog(@"got a valid JSON object");
+      NSString *name = [lapRespDict valueForKey:@"name"];
+      NSLog(@"name = %@",name);
+      NSArray *data = [lapRespDict valueForKey:@"data"];
+      [accessPoints removeAllObjects];
+      NSLog(@"data contains :");
+      for (int i=0; i < [data count]; i++)
+      {
+        [accessPoints addObject:[data objectAtIndex:i]];
+        NSLog(@"  %@",[data objectAtIndex:i]);
+      }
+      [self.tableView reloadData];
+//      NSMutableDictionary *data = [[[lapRespDict valueForKey:@"data"] objectAtIndex:1] mutableCopy];
+//      NSLog(@"description %@",data.description);
+      
+    }
+  }
+//  NSError *error;
+//  NSDictionary *lapRespDict = [NSJSONSerialization JSONObjectWithData:lapRespData options:kNilOptions error:&error];
+//  if (error.)
+//  NSLog(@"lapRespDict has %d items",[lapRespDict count]);
+//  id dataObject = [lapRespDict valueForKey:@"data"];
+//  if ([dataObject isKindOfClass:[NSArray class]])
+//    NSLog(@"found NSArray");
+//  if ([dataObject isKindOfClass:[NSMutableArray class]])
+//    NSLog(@"found NSMutableArray");
+//  if ([dataObject isMemberOfClass:[NSDictionary class]])
+//    NSLog(@"found NSDictionary");
+//  if ([dataObject isMemberOfClass:[NSMutableDictionary class]])
+//    NSLog(@"found NSMutableDictionary");
 }
 
 @end

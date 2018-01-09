@@ -15,6 +15,4 @@
 @property (weak, nonatomic) CBPeripheral *peripheral;
 @property (strong, nonatomic) CBService *service;
 
-@property NSArray<NSString *> *accessPoints;
-
 @end
