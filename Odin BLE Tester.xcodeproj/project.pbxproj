@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7A48938C200730D500DBF741 /* BLEUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A48938B200730D500DBF741 /* BLEUtils.m */; };
 		7A52D3BD1FFD94A700479683 /* AccessPointsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A52D3BC1FFD94A700479683 /* AccessPointsController.m */; };
 		7A5CA5F5200445D9006DB940 /* PickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A5CA5F4200445D9006DB940 /* PickerView.m */; };
 		7AC4BC7E1FFA5C9C00AE7C8E /* BagController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AC4BC7D1FFA5C9C00AE7C8E /* BagController.m */; };
@@ -23,6 +24,8 @@
 
 /* Begin PBXFileReference section */
 		7A20A8FA1FFAD7AA009DA389 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
+		7A48938B200730D500DBF741 /* BLEUtils.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BLEUtils.m; sourceTree = "<group>"; };
+		7A48938D200730EC00DBF741 /* BLEUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BLEUtils.h; sourceTree = "<group>"; };
 		7A52D3BB1FFD94A700479683 /* AccessPointsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AccessPointsController.h; sourceTree = "<group>"; };
 		7A52D3BC1FFD94A700479683 /* AccessPointsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AccessPointsController.m; sourceTree = "<group>"; };
 		7A5CA5F3200445D9006DB940 /* PickerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PickerView.h; sourceTree = "<group>"; };
@@ -126,6 +129,8 @@
 				7AD760C31FF6D11F00AB0541 /* BLE.h */,
 				7AD760C21FF6D11F00AB0541 /* BLE.m */,
 				7AD760C11FF6D11E00AB0541 /* BLEDefines.h */,
+				7A48938D200730EC00DBF741 /* BLEUtils.h */,
+				7A48938B200730D500DBF741 /* BLEUtils.m */,
 			);
 			path = RB_BLE;
 			sourceTree = "<group>";
@@ -211,6 +216,7 @@
 				7AD760B01FF6D07A00AB0541 /* SecondViewController.m in Sources */,
 				7AD760AA1FF6D07A00AB0541 /* AppDelegate.m in Sources */,
 				7AD760BB1FF6D07A00AB0541 /* main.m in Sources */,
+				7A48938C200730D500DBF741 /* BLEUtils.m in Sources */,
 				7AD760C41FF6D11F00AB0541 /* BLE.m in Sources */,
 				7A52D3BD1FFD94A700479683 /* AccessPointsController.m in Sources */,
 				7AC4BC811FFAC9D700AE7C8E /* BagTableViewCell.m in Sources */,

@@ -216,12 +216,14 @@ bool haveRx = false;
   if (haveTx)
   {
     // +--ID--+-Arg Len-+-Arg Data-------------------------------------------+
-    // | 0x21 | 063     | home | ssid | auth | pwd                           |
+    // | 0x21 | 097     | home | ssid | auth | pwd                           |
     // +------+---------+----------------------------------------------------+
     // | 1 B  | 3 C     | 1 B  | 32 B | 1 B  | 63 B                          |
     // +------+---------+----------------------------------------------------+
     //
     // home is not true (i.e, not set to 1)
+    // Arg Len is encoded as decimal ascii
+    //
     unsigned char addAccessPointCommand[5] = {0x21, 0x30, 0x36, 0x31, 0xFF};
     NSMutableData *AAPCmd = [NSMutableData dataWithBytes:addAccessPointCommand length:sizeof(addAccessPointCommand)];
     // since the ap string was selected using APs detected by the device, they cannot be too long (> 32 chars)

@@ -1,5 +1,6 @@
 //
-//  ConfigurationControllerTableViewController.m
+//  BagController.m
+//
 //  Odin BLE Tester
 //
 //  Created by Knud S Knudsen on 2018-01-01.
@@ -44,8 +45,7 @@
   [self.navigationItem.rightBarButtonItem setEnabled:false];
 
   
-  ble = [[BLE alloc] init];
-  [ble controlSetup];
+  ble = [BLE sharedInstance];
   ble.delegate = self;
   
   // Uncomment the following line to preserve selection between presentations.
@@ -174,7 +174,7 @@
   if (ble.peripherals)
     ble.peripherals = nil;
 
-  [ble findBLEPeripherals:2];
+  [ble findPeripherals:2];
   
   [NSTimer scheduledTimerWithTimeInterval:(float)2.0 target:self selector:@selector(connectionTimer:) userInfo:nil repeats:NO];
   
