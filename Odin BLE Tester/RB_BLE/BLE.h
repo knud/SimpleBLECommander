@@ -40,8 +40,8 @@
 
 @property (nonatomic,assign) id <BLEDelegate> delegate;
 @property (strong, nonatomic) NSMutableArray *peripherals;
-@property (strong, nonatomic) CBCentralManager *CM;
 @property (strong, nonatomic) CBPeripheral *activePeripheral;
+@property (strong, nonatomic) CBCentralManager *CM;
 
 + (id)sharedInstance;
 
@@ -66,7 +66,5 @@
 -(void) writeValue:(CBUUID *)serviceUUID characteristicUUID:(CBUUID *)characteristicUUID p:(CBPeripheral *)p data:(NSData *)data;
 -(void) readValue: (CBUUID *)serviceUUID characteristicUUID:(CBUUID *)characteristicUUID p:(CBPeripheral *)p;
 -(void) enableReadNotification:(CBPeripheral *)p;
-
-//-(void) controlSetup;
 
 @end

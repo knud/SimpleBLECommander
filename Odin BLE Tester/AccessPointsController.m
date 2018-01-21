@@ -11,6 +11,7 @@
 #import "PickerView.h"
 #import "BLEDefines.h"
 #import "EnvisasSupport/EnvisasAccessPointSecurity.h"
+#import "EnvisasCommand.h"
 
 @interface AccessPointsController ()
 
@@ -39,11 +40,11 @@ bool haveRx = false;
   
   bleReceiverBuffer=[[NSMutableData alloc] init];
   accessPoints = [[NSMutableArray<NSString *> alloc] init];
-
+  
   UIBarButtonItem *addAPButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addAcessPoint:)];
   [self navigationItem].rightBarButtonItem = addAPButton;
   [self navigationItem].title = @"Access Points";
-
+  
   if (ble.activePeripheral)
   {
     if(ble.activePeripheral.state == CBPeripheralStateConnected)
@@ -106,7 +107,7 @@ bool haveRx = false;
   
   [cell.textLabel setText:ap];
   [cell.detailTextLabel setText:@"could put something here..."];
-
+  
   return cell;
 }
 
@@ -149,15 +150,15 @@ bool haveRx = false;
 
 - (IBAction)addAcessPoint:(id)sender {
   NSLog(@"addAcessPoint");
-
+  
   // Always present the connected access point
   NSMutableArray *ssids = [[NSMutableArray alloc] initWithObjects:[self getConnectedAccessPoint], nil];
-
+  
   // Pretend we somehow know some other APs...
   [ssids addObject:@"fooAP"];
   [ssids addObject:@"barAP"];
   [ssids addObject:@"01234567890123456789012345678932"];
-
+  
   [PickerView showPickerWithOptions:ssids title:@"Select Access Point" selectionBlock:^(NSString *accessPointName) {
     NSLog(@"Selected Access Point : %@",accessPointName);
     if (self.presentedViewController != nil)
@@ -234,10 +235,10 @@ bool haveRx = false;
       ap = [ap stringByAppendingString:temp];
     }
     NSData *apData = [ap dataUsingEncoding:NSUTF8StringEncoding];
-//    apData = [apData subdataWithRange:NSMakeRange(0, [apData length] - 1)];
+    //    apData = [apData subdataWithRange:NSMakeRange(0, [apData length] - 1)];
     [AAPCmd appendData:apData];
     NSLog(@"AAPCmd length is %lu",(unsigned long)[AAPCmd length]);
-
+    
     uint8_t auth[1] = {ENVISAS_ACCESS_POINT_SECURITY_WPA2_MIXED_PSK};
     [AAPCmd appendBytes:auth length:1];
     NSLog(@"AAPCmd length is %lu",(unsigned long)[AAPCmd length]);
@@ -297,22 +298,22 @@ bool haveRx = false;
     {
       unsigned long numServices = [self.ble.activePeripheral.services count];
       NSLog(@" %lu services found for %@",numServices,self.ble.activePeripheral.name);
-    CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
-    for (int i = 0; i < numServices; i++)
-    {
-      CBService *s = [self.ble.activePeripheral.services objectAtIndex:i];
-      NSLog(@"\t service UUID %@",s.UUID.UUIDString);
-      if ([s.UUID.UUIDString isEqual:commandServiceUUID.UUIDString])
+      CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
+      for (int i = 0; i < numServices; i++)
       {
-        self.service = s;
-        CBUUID *clientSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_CLIENT_SEND_CHARACTERISTIC_UUID];
-        CBUUID *serverSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVER_SEND_CHARACTERISTIC_UUID];
-        NSArray<CBUUID *> *characteristicUUIDs = [NSArray arrayWithObjects:clientSendServiceUUID,serverSendServiceUUID, nil];
-        NSLog(@"  ->findCharacteristicsFrom");
-        [self.ble findCharacteristicsFrom:self.peripheral characteristicUUIDs:(NSArray<CBUUID *> *)characteristicUUIDs];
-        return;
+        CBService *s = [self.ble.activePeripheral.services objectAtIndex:i];
+        NSLog(@"\t service UUID %@",s.UUID.UUIDString);
+        if ([s.UUID.UUIDString isEqual:commandServiceUUID.UUIDString])
+        {
+          self.service = s;
+          CBUUID *clientSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_CLIENT_SEND_CHARACTERISTIC_UUID];
+          CBUUID *serverSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVER_SEND_CHARACTERISTIC_UUID];
+          NSArray<CBUUID *> *characteristicUUIDs = [NSArray arrayWithObjects:clientSendServiceUUID,serverSendServiceUUID, nil];
+          NSLog(@"  ->findCharacteristicsFrom");
+          [self.ble findCharacteristicsFrom:self.peripheral characteristicUUIDs:(NSArray<CBUUID *> *)characteristicUUIDs];
+          return;
+        }
       }
-    }
     }
   }
 }
@@ -341,9 +342,21 @@ bool haveRx = false;
   
   if (haveTx)
   {
-    unsigned char listAccessPointsCommand[4] = {0x20, 0x30, 0x30, 0x30};
-    NSData *LAPCmd = [NSData dataWithBytes:listAccessPointsCommand length:4];
-    [self.ble write:LAPCmd];
+    EnvisasCommand * listAPsCommand = [[EnvisasCommand alloc] initWith:LIST_ACCESS_POINTS argument:NULL error:NULL];
+    NSArray<NSString *> *lapCommandStrings = [listAPsCommand commandStrings];
+    //    EnvisasCommand * addAPCommand = [[EnvisasCommand alloc] initWith:ADD_ACCESS_POINT argument:@"01234567890123456789ssidssidssid passwordpasswordpasswordpassword" error:NULL];
+    //    NSArray<NSString *> *aapCommandStrings = [addAPCommand commandStrings];
+    
+    for (int i = 0; i < [lapCommandStrings count]; i++) {
+      NSString *cmdStr = [lapCommandStrings objectAtIndex:i];
+      NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
+      NSLog(@"cmdStr = %@",cmdStr);
+      [self.ble write:cmdData];
+      [NSThread sleepForTimeInterval:0.05];
+    }
+    //    unsigned char listAccessPointsCommand[4] = {0x20, 0x30, 0x30, 0x30};
+    //    NSData *LAPCmd = [NSData dataWithBytes:listAccessPointsCommand length:4];
+    //    [self.ble write:LAPCmd];
   }
 }
 
@@ -366,7 +379,7 @@ bool haveRx = false;
     if (recStartFound)
     {
       [bleReceiverBuffer appendBytes:data length:length];
-//      NSString *rec = [NSString stringWithUTF8String:[bleReceiverBuffer bytes]];
+      //      NSString *rec = [NSString stringWithUTF8String:[bleReceiverBuffer bytes]];
       NSString *rec  = [[NSString alloc] initWithBytes:[bleReceiverBuffer bytes] length:[bleReceiverBuffer length] encoding:NSUTF8StringEncoding];
       NSLog(@"rec length = %lu",(unsigned long)[rec length]);
       if ([rec rangeOfString:@"}"].location == NSNotFound)
@@ -378,17 +391,18 @@ bool haveRx = false;
         NSLog(@"--------------------");
         
         NSData *recData = [NSData dataWithBytes:[bleReceiverBuffer bytes] length:[bleReceiverBuffer length]];
-        [self parseLAPResponse:recData];
+        [self parseResponse:recData];
         recStartFound = false;
       }
     }
-
+  
 }
 
-- (void) parseLAPResponse:(NSData *)response
+// TODO Yes, I know that hard coding the key strings is a no-no, but we are maintaining
+// API definitions between two different code bases and there is not much motivation
+// to make it better when my iOS examples are throw-away
+- (void) parseResponse:(NSData *)response
 {
-//  NSDictionary *lapRespDict = (NSDictionary*) [NSKeyedUnarchiver unarchiveObjectWithData:response];
-
   NSError *error;
   NSDictionary *lapRespDict = [NSJSONSerialization JSONObjectWithData:response options:kNilOptions error:&error];
   if (error)
@@ -401,33 +415,33 @@ bool haveRx = false;
       NSLog(@"got a valid JSON object");
       NSString *name = [lapRespDict valueForKey:@"name"];
       NSLog(@"name = %@",name);
-      NSArray *data = [lapRespDict valueForKey:@"data"];
-      [accessPoints removeAllObjects];
-      NSLog(@"data contains :");
-      for (int i=0; i < [data count]; i++)
-      {
-        [accessPoints addObject:[data objectAtIndex:i]];
-        NSLog(@"  %@",[data objectAtIndex:i]);
+      
+      // check for access_points list
+      if ([name compare:@"access_points"] == 0) {
+        NSArray *data = [lapRespDict valueForKey:@"data"];
+        [accessPoints removeAllObjects];
+        NSLog(@"data contains :");
+        for (int i=0; i < [data count]; i++)
+        {
+          [accessPoints addObject:[data objectAtIndex:i]];
+          NSLog(@"  %@",[data objectAtIndex:i]);
+        }
+        [self.tableView reloadData];
+      } // if access_points
+      
+      // check for command_result
+      if ([name compare:@"command_result"] == 0) {
+        NSString *result = [lapRespDict valueForKey:@"data"];
+        if (result) {
+          NSLog(@"command_result = %@",result);
+        } else {
+          NSLog(@"Bad command_result");
+        }
+        
       }
-      [self.tableView reloadData];
-//      NSMutableDictionary *data = [[[lapRespDict valueForKey:@"data"] objectAtIndex:1] mutableCopy];
-//      NSLog(@"description %@",data.description);
       
     }
   }
-//  NSError *error;
-//  NSDictionary *lapRespDict = [NSJSONSerialization JSONObjectWithData:lapRespData options:kNilOptions error:&error];
-//  if (error.)
-//  NSLog(@"lapRespDict has %d items",[lapRespDict count]);
-//  id dataObject = [lapRespDict valueForKey:@"data"];
-//  if ([dataObject isKindOfClass:[NSArray class]])
-//    NSLog(@"found NSArray");
-//  if ([dataObject isKindOfClass:[NSMutableArray class]])
-//    NSLog(@"found NSMutableArray");
-//  if ([dataObject isMemberOfClass:[NSDictionary class]])
-//    NSLog(@"found NSDictionary");
-//  if ([dataObject isMemberOfClass:[NSMutableDictionary class]])
-//    NSLog(@"found NSMutableDictionary");
 }
 
 @end

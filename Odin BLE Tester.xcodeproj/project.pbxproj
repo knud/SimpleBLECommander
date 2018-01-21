@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		7A48938C200730D500DBF741 /* BLEUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A48938B200730D500DBF741 /* BLEUtils.m */; };
+		7A4893902007C5AC00DBF741 /* EnvisasReader.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A48938F2007C5AC00DBF741 /* EnvisasReader.m */; };
+		7A4893942007DD2800DBF741 /* EnvisasCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A4893932007DD2800DBF741 /* EnvisasCommand.m */; };
 		7A52D3BD1FFD94A700479683 /* AccessPointsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A52D3BC1FFD94A700479683 /* AccessPointsController.m */; };
 		7A5CA5F5200445D9006DB940 /* PickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A5CA5F4200445D9006DB940 /* PickerView.m */; };
 		7AC4BC7E1FFA5C9C00AE7C8E /* BagController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AC4BC7D1FFA5C9C00AE7C8E /* BagController.m */; };
@@ -26,6 +28,10 @@
 		7A20A8FA1FFAD7AA009DA389 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
 		7A48938B200730D500DBF741 /* BLEUtils.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BLEUtils.m; sourceTree = "<group>"; };
 		7A48938D200730EC00DBF741 /* BLEUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BLEUtils.h; sourceTree = "<group>"; };
+		7A48938F2007C5AC00DBF741 /* EnvisasReader.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EnvisasReader.m; sourceTree = "<group>"; };
+		7A4893912007C5D000DBF741 /* EnvisasReader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnvisasReader.h; sourceTree = "<group>"; };
+		7A4893922007DD1000DBF741 /* EnvisasCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnvisasCommand.h; sourceTree = "<group>"; };
+		7A4893932007DD2800DBF741 /* EnvisasCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EnvisasCommand.m; sourceTree = "<group>"; };
 		7A52D3BB1FFD94A700479683 /* AccessPointsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AccessPointsController.h; sourceTree = "<group>"; };
 		7A52D3BC1FFD94A700479683 /* AccessPointsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AccessPointsController.m; sourceTree = "<group>"; };
 		7A5CA5F3200445D9006DB940 /* PickerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PickerView.h; sourceTree = "<group>"; };
@@ -72,6 +78,17 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		7A48938E2007C56B00DBF741 /* EnvisasReader */ = {
+			isa = PBXGroup;
+			children = (
+				7A48938F2007C5AC00DBF741 /* EnvisasReader.m */,
+				7A4893912007C5D000DBF741 /* EnvisasReader.h */,
+				7A4893922007DD1000DBF741 /* EnvisasCommand.h */,
+				7A4893932007DD2800DBF741 /* EnvisasCommand.m */,
+			);
+			path = EnvisasReader;
+			sourceTree = "<group>";
+		};
 		7A5CA5F620044664006DB940 /* EnvisasSupport */ = {
 			isa = PBXGroup;
 			children = (
@@ -100,6 +117,7 @@
 		7AD760A71FF6D07A00AB0541 /* Odin BLE Tester */ = {
 			isa = PBXGroup;
 			children = (
+				7A48938E2007C56B00DBF741 /* EnvisasReader */,
 				7A5CA5F620044664006DB940 /* EnvisasSupport */,
 				7AD760A81FF6D07A00AB0541 /* AppDelegate.h */,
 				7AD760A91FF6D07A00AB0541 /* AppDelegate.m */,
@@ -211,6 +229,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A4893942007DD2800DBF741 /* EnvisasCommand.m in Sources */,
 				7A5CA5F5200445D9006DB940 /* PickerView.m in Sources */,
 				7AC4BC7E1FFA5C9C00AE7C8E /* BagController.m in Sources */,
 				7AD760B01FF6D07A00AB0541 /* SecondViewController.m in Sources */,
@@ -219,6 +238,7 @@
 				7A48938C200730D500DBF741 /* BLEUtils.m in Sources */,
 				7AD760C41FF6D11F00AB0541 /* BLE.m in Sources */,
 				7A52D3BD1FFD94A700479683 /* AccessPointsController.m in Sources */,
+				7A4893902007C5AC00DBF741 /* EnvisasReader.m in Sources */,
 				7AC4BC811FFAC9D700AE7C8E /* BagTableViewCell.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
