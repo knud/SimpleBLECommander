@@ -92,7 +92,6 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   
-  NSLog(@"cellforRowAt...");
   static NSString *cellIdentifier = @"BagContentsCell";
   
   UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier forIndexPath:indexPath];
@@ -218,7 +217,7 @@
       [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
       
       // We need a list of tags, so issue an inventory command
-      EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
+      EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"005" error:NULL];
       NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
       
       //    EnvisasCommand * listAPsCommand = [[EnvisasCommand alloc] initWith:LIST_ACCESS_POINTS argument:NULL error:NULL];
@@ -277,26 +276,63 @@
           [self.ble.activePeripheral readValueForCharacteristic:characteristic];
         } else {
           NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
-          NSString *temp = [[NSString alloc] initWithData:bleReceiverBuffer encoding:NSUTF8StringEncoding];
-          NSLog(@" temp string = %@",temp);
-          // TODO parse the data!
+          [self parseResponse:bleReceiverBuffer];
         }
       }
     }
   }
 }
 
-
 // TODO Yes, I know that hard coding the key strings is a no-no, but we are maintaining
 // API definitions between two different code bases and there is not much motivation
 // to make it better when my iOS examples are throw-away
 - (void) parseResponse:(NSData *)response
 {
+  // We expect 3 JSON messages in the response, so have to first carve them out
+  NSData * commandResponse;
+  NSData * commandEnd;
+  NSData * commandResult;
+
+  NSString *temp = [[NSString alloc] initWithData:bleReceiverBuffer encoding:NSUTF8StringEncoding];
+  NSLog(@" temp string = %@",temp);
+  // TODO parse the data!
+  NSString *startStr = @"{\"name";
+  NSString *endStr = @"\"}";
+  NSRange currentRange = {0, [temp length]};
+  for (int jsonMsgs = 0; jsonMsgs < 3; jsonMsgs++) {
+    NSRange startRange = [temp rangeOfString:startStr options:NSLiteralSearch range:currentRange];
+    NSLog(@"range %lu %lu",(unsigned long)startRange.location,(unsigned long)startRange.length);
+    if (startRange.length <= 0) {
+      NSLog(@"Parse error; no starting {\"name");
+      return;
+    }
+    currentRange.location = startRange.location + startRange.length;
+    currentRange.length = [temp length] - currentRange.location;
+    NSRange endRange = [temp rangeOfString:endStr options:NSLiteralSearch range:currentRange];
+    NSLog(@"range %lu %lu",(unsigned long)endRange.location,(unsigned long)endRange.length);
+    if (endRange.length <= 0) {
+      NSLog(@"Parse error; no closing }");
+      return;
+    }
+    currentRange.location = endRange.location + endRange.length;
+    currentRange.length = [temp length] - currentRange.location;
+    // grab the data
+    NSRange subDataRange = {startRange.location, endRange.location + endRange.length - startRange.location};
+    NSData *tempData = [response subdataWithRange:subDataRange];
+    if (jsonMsgs == 0) commandResponse = [NSData dataWithData:tempData];
+    if (jsonMsgs == 1) commandEnd = [NSData dataWithData:tempData];
+    if (jsonMsgs == 2) commandResult = [NSData dataWithData:tempData];
+  }
+  
+  // TODO for now, check only the response data
+  // TODO should probably refactor this method
   NSError *error;
-  NSDictionary *respDict = [NSJSONSerialization JSONObjectWithData:response options:kNilOptions error:&error];
+  NSDictionary *respDict = [NSJSONSerialization JSONObjectWithData:commandResponse options:kNilOptions error:&error];
   if (error)
   {
     NSLog(@"LAP response is not JSON");
+    if ([error code] == NSPropertyListReadCorruptError)
+      NSLog(@"Error code is NSPropertyListReadCorruptError");
   }
   else {
     if ([NSJSONSerialization isValidJSONObject:respDict])
@@ -305,7 +341,7 @@
       // "name" key always refers to a string, so no need to check
       NSString *name = [respDict valueForKey:@"name"];
       NSLog(@"name = %@",name);
-      
+
       // check for tags list
       if ([name compare:@"inventory"] == 0) {
         // inventory messages are either JSON arrays or strings
@@ -345,7 +381,7 @@
           }
         }
       } // name is not "inventory"
-      
+
     }
   }
 }
