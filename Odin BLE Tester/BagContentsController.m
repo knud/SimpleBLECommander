@@ -3,25 +3,76 @@
 //  Odin BLE Tester
 //
 //  Created by Knud S Knudsen on 2018-01-21.
-//  Copyright © 2018 TechConficio. All rights reserved.
+//  Copyright © 2018 Envisas Inc. All rights reserved.
 //
 
 #import "BagContentsController.h"
+#import "BLEDefines.h"
+#import "EnvisasCommand.h"
 
 @interface BagContentsController ()
-
+{
+  NSMutableArray<NSString *> *tags;
+  NSMutableData *bleReceiverBuffer;
+  int bleDataCount;
+  bool recStartFound;
+  bool recEndFound;
+}
 @end
 
 @implementation BagContentsController
 
+@synthesize ble;
+@synthesize peripheral;
+@synthesize service;
+
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    // Uncomment the following line to preserve selection between presentations.
-    // self.clearsSelectionOnViewWillAppear = NO;
-    
-    // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-    // self.navigationItem.rightBarButtonItem = self.editButtonItem;
+  NSLog(@"BagContentsController using peripheral %@",self.peripheral.name);
+  
+  
+  // safe to initialize as nothing could have possibly been received yet
+  recStartFound = false;
+  recEndFound = false;;
+
+  ble.delegate = self;
+  
+  bleReceiverBuffer=[[NSMutableData alloc] init];
+  bleDataCount = 0;
+  tags = [[NSMutableArray<NSString *> alloc] init];
+  
+  UIImage *configImage = [UIImage imageNamed:@"spanner.png"];
+  UIBarButtonItem *configButton = [[UIBarButtonItem alloc] initWithImage:configImage style:UIBarButtonItemStylePlain target:self action:@selector(configure:)];
+  [self navigationItem].rightBarButtonItem = configButton;
+  
+  if (ble.activePeripheral)
+  {
+    if(ble.activePeripheral.state == CBPeripheralStateConnected)
+    {
+      NSLog(@"What? Got an active peripheral. Disconnecting...");
+      [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
+    } else
+    {
+      if (self.peripheral)
+        [ble connectPeripheral:self.peripheral];
+    }
+  }
+  
+}
+
+- (void) viewDidDisappear:(BOOL)animated
+{
+  if (ble.activePeripheral)
+  {
+    if(ble.activePeripheral.state == CBPeripheralStateConnected)
+    {
+      NSLog(@"Disconnecting peripheral...");
+      [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
+    }
+  }
+  ble = nil;
 }
 
 - (void)didReceiveMemoryWarning {
@@ -32,58 +83,40 @@
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-#warning Incomplete implementation, return the number of sections
-    return 0;
+    return 1;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-#warning Incomplete implementation, return the number of rows
-    return 0;
+    return [tags count];
 }
 
-/*
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:<#@"reuseIdentifier"#> forIndexPath:indexPath];
-    
-    // Configure the cell...
-    
-    return cell;
+  
+  NSLog(@"cellforRowAt...");
+  static NSString *cellIdentifier = @"BagContentsCell";
+  
+  UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier forIndexPath:indexPath];
+  
+  if (cell == nil) {
+    cell = [[UITableViewCell alloc]
+            initWithStyle:UITableViewCellStyleDefault
+            reuseIdentifier:cellIdentifier];
+  }
+  
+  NSString *tagName = [tags objectAtIndex:indexPath.row];
+  
+  [cell.textLabel setText:tagName];
+  [cell.detailTextLabel setText:@"could put something here..."];
+  
+  return cell;
 }
-*/
 
-/*
-// Override to support conditional editing of the table view.
-- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
-    // Return NO if you do not want the specified item to be editable.
-    return YES;
-}
-*/
+#pragma mark - UI actions
 
-/*
-// Override to support editing the table view.
-- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (editingStyle == UITableViewCellEditingStyleDelete) {
-        // Delete the row from the data source
-        [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
-    } else if (editingStyle == UITableViewCellEditingStyleInsert) {
-        // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-    }   
+- (IBAction)configure:(id)sender {
+  NSLog(@"configure");
 }
-*/
 
-/*
-// Override to support rearranging the table view.
-- (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath {
-}
-*/
-
-/*
-// Override to support conditional rearranging of the table view.
-- (BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)indexPath {
-    // Return NO if you do not want the item to be re-orderable.
-    return YES;
-}
-*/
 
 /*
 #pragma mark - Navigation
@@ -94,5 +127,227 @@
     // Pass the selected object to the new view controller.
 }
 */
+
+#pragma mark - BLE delegate
+
+// When connected, this will be called
+-(void) bleDidConnect
+{
+  NSLog(@"->Connected");
+  
+  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
+  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
+  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
+  
+}
+
+- (void)bleDidDisconnect
+{
+  NSLog(@"->Disconnected. Connecting to proper peripheral");
+  if (self.peripheral)
+    [ble connectPeripheral:self.peripheral];
+}
+
+-(void) bleServicesFound;
+{
+  NSLog(@"->bleServicesFound");
+  if (self.ble.activePeripheral)
+  {
+    if (self.ble.activePeripheral.services)
+    {
+      unsigned long numServices = [self.ble.activePeripheral.services count];
+      NSLog(@" %lu services found for %@",numServices,self.ble.activePeripheral.name);
+      CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
+      for (int i = 0; i < numServices; i++)
+      {
+        CBService *s = [self.ble.activePeripheral.services objectAtIndex:i];
+        NSLog(@"\t service UUID %@",s.UUID.UUIDString);
+        if ([s.UUID.UUIDString isEqual:commandServiceUUID.UUIDString])
+        {
+          self.service = s;
+          CBUUID *commandSpareCharacteristicUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SPARE_CHARACTERISTIC_UUID];
+          CBUUID *commandInvokeCharacteristicUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
+          CBUUID *commandResponseCharacteristicUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID];
+          NSArray<CBUUID *> *characteristicUUIDs = [NSArray arrayWithObjects:commandSpareCharacteristicUUID,commandInvokeCharacteristicUUID,commandResponseCharacteristicUUID, nil];
+          NSLog(@"  ->findCharacteristicsFrom");
+          [self.ble findCharacteristicsFrom:self.peripheral characteristicUUIDs:(NSArray<CBUUID *> *)characteristicUUIDs];
+          return;
+        }
+      }
+    }
+  }
+}
+
+-(void) bleServiceCharacteristicsFound
+{
+  NSLog(@"->bleServiceCharacteristicsFound");
+  CBUUID *commandSpareCharacteristicUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SPARE_CHARACTERISTIC_UUID];
+  CBUUID *commandInvokeCharacteristicUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
+  CBUUID *commandResponseCharacteristicUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID];
+  for (int i=0; i < self.service.characteristics.count; i++)
+  {
+    CBCharacteristic *c = [service.characteristics objectAtIndex:i];
+    NSLog(@"Found characteristic %@",c.UUID.UUIDString);
+    if (c.properties & CBCharacteristicPropertyRead)
+      printf("  has read\n");
+    if (c.properties & CBCharacteristicPropertyWrite)
+      printf("  has write\n");
+    if (c.properties & CBCharacteristicPropertyWriteWithoutResponse)
+      printf("  has write without response\n");
+    if (c.properties & CBCharacteristicPropertyNotify)
+      printf("  has notify\n");
+    if (c.properties & CBCharacteristicPropertyIndicate)
+      printf("  has indicate\n");
+    if (c.properties & CBCharacteristicPropertyBroadcast)
+      printf("  has broadcast\n");
+    if (c.properties & CBCharacteristicPropertyExtendedProperties)
+      printf("  has extended properties\n");
+    if (c.properties & CBCharacteristicPropertyNotifyEncryptionRequired)
+      printf("  has notify encryption requires\n");
+    if (c.properties & CBCharacteristicPropertyIndicateEncryptionRequired)
+      printf("  has indicate encryption required\n");
+    if (c.properties & CBCharacteristicPropertyAuthenticatedSignedWrites)
+      printf("  has authenticated signed writes\n");
+
+    // Ignore the spare for now...
+    if ([c.UUID.UUIDString isEqual:commandSpareCharacteristicUUID.UUIDString]) {}
+
+    if ([c.UUID.UUIDString isEqual:commandInvokeCharacteristicUUID.UUIDString])
+    {
+      // enable notification for this characteristic on the peripheral
+      [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
+      
+      // We need a list of tags, so issue an inventory command
+      EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
+      NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
+      
+      //    EnvisasCommand * listAPsCommand = [[EnvisasCommand alloc] initWith:LIST_ACCESS_POINTS argument:NULL error:NULL];
+      //    NSArray<NSString *> *commandStrings = [listAPsCommand commandStrings];
+      
+      // TODO could move this into a method to handle command strings?
+      CBUUID *uuid = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
+      for (int i = 0; i < [commandStrings count]; i++) {
+        NSString *cmdStr = [commandStrings objectAtIndex:i];
+        NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
+        NSLog(@"cmdStr = %@",cmdStr);
+        [self.ble write:cmdData toUUID:uuid];
+        [NSThread sleepForTimeInterval:0.05];
+      }
+    }
+    if ([c.UUID.UUIDString isEqual:commandResponseCharacteristicUUID.UUIDString])
+    {
+      // enable notification for this characteristic on the peripheral
+      [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
+    }
+  }
+}
+
+-(void) bleHaveDataFor:(CBCharacteristic *)characteristic
+{
+  // paranoid check
+  if (characteristic.value) {
+    if ([characteristic.value length] > 0)
+    {
+      if (bleDataCount <= 0) {
+        NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
+//        NSLog(@"bleHaveDataFor received %@",cv);
+        NSRange prefixRange = [cv rangeOfString:@"dataAvailable" options:(NSAnchoredSearch | NSCaseInsensitiveSearch)];
+        if (prefixRange.length > 0) {
+          // new data is available
+          NSString *countStr = [cv substringFromIndex:(prefixRange.length+1)];
+          NSLog(@"countStr %@",countStr);
+          [bleReceiverBuffer setLength:0];
+          bleDataCount = [countStr intValue];
+          // ask for some data
+          [self.ble.activePeripheral readValueForCharacteristic:characteristic];
+        }
+      } else {
+//        NSLog(@"bleHaveDataFor received %lu bytes",[characteristic.value length]);
+        [bleReceiverBuffer appendData:characteristic.value];
+        bleDataCount -= [characteristic.value length];
+//        const char * rxBytes = [characteristic.value bytes];
+//        for (int i = 0; i < [characteristic.value length]; i++)
+//        {
+//          printf("%c",rxBytes[i]);
+//        }
+//        printf("\n\n");
+
+        if (bleDataCount > 0) {
+          // ask for more data
+          [self.ble.activePeripheral readValueForCharacteristic:characteristic];
+        } else {
+          NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
+          NSString *temp = [[NSString alloc] initWithData:bleReceiverBuffer encoding:NSUTF8StringEncoding];
+          NSLog(@" temp string = %@",temp);
+          // TODO parse the data!
+        }
+      }
+    }
+  }
+}
+
+
+// TODO Yes, I know that hard coding the key strings is a no-no, but we are maintaining
+// API definitions between two different code bases and there is not much motivation
+// to make it better when my iOS examples are throw-away
+- (void) parseResponse:(NSData *)response
+{
+  NSError *error;
+  NSDictionary *respDict = [NSJSONSerialization JSONObjectWithData:response options:kNilOptions error:&error];
+  if (error)
+  {
+    NSLog(@"LAP response is not JSON");
+  }
+  else {
+    if ([NSJSONSerialization isValidJSONObject:respDict])
+    {
+      NSLog(@"got a valid JSON object");
+      // "name" key always refers to a string, so no need to check
+      NSString *name = [respDict valueForKey:@"name"];
+      NSLog(@"name = %@",name);
+      
+      // check for tags list
+      if ([name compare:@"inventory"] == 0) {
+        // inventory messages are either JSON arrays or strings
+        NSObject *value = [respDict valueForKey:@"data"];
+        if (value != nil && value != [NSNull null]) {
+          if ([value isKindOfClass:[NSString class]])
+          {
+            NSString *invString = (NSString *) value;
+            if ([invString componentsSeparatedByString:@"end"] == 0)
+            {
+              NSLog(@"No more tags...");
+              return;
+            }
+          }
+          if ([value isKindOfClass:[NSArray class]])
+          {
+            NSArray *data = (NSArray *) value;
+            [tags removeAllObjects];
+            NSLog(@"data contains :");
+            for (int i=0; i < [data count]; i++)
+            {
+              [tags addObject:[data objectAtIndex:i]];
+              NSLog(@"  %@",[data objectAtIndex:i]);
+            }
+            [self.tableView reloadData];
+          } // if access_points
+        }
+      } // name is "inventory"
+      else {
+        // check for command_result
+        if ([name compare:@"command_result"] == 0) {
+          NSString *result = [respDict valueForKey:@"data"];
+          if (result) {
+            NSLog(@"command_result = %@",result);
+          } else {
+            NSLog(@"Bad command_result");
+          }
+        }
+      } // name is not "inventory"
+      
+    }
+  }
+}
 
 @end

@@ -4,14 +4,14 @@
 //  Odin BLE Tester
 //
 //  Created by Knud S Knudsen on 2018-01-01.
-//  Copyright © 2018 TechConficio. All rights reserved.
+//  Copyright © 2018 Envisas Inc. All rights reserved.
 //
 
 #import "BagController.h"
 #import "BagTableViewCell.h"
 #import "BLEDefines.h"
 
-#import "AccessPointsController.h"
+#import "BagContentsController.h"
 
 @interface BagController ()
 
@@ -104,15 +104,15 @@
  
  // In a storyboard-based application, you will often want to do a little preparation before navigation
  - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-   if ([[segue identifier] isEqualToString:@"accessPointsSegue"]) {
-     NSLog(@"[BagController] accessPointsSegue ");
+   if ([[segue identifier] isEqualToString:@"bagContentsSegue"]) {
+     NSLog(@"[BagController] bagContentsSegue ");
      // Get the new view controller using [segue destinationViewController].
-     AccessPointsController *apc = [segue destinationViewController];
+     BagContentsController *bcc = [segue destinationViewController];
      
      BagTableViewCell *cell = (BagTableViewCell *) sender;
      
-     [apc setBle:self.ble];
-     [apc setPeripheral:cell.peripheral];
+     [bcc setBle:self.ble];
+     [bcc setPeripheral:cell.peripheral];
      if (ble.activePeripheral)
        if(ble.activePeripheral.state == CBPeripheralStateConnected)
          [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];

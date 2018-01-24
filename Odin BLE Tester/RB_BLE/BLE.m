@@ -185,17 +185,16 @@ static int rssi = 0;
 -(void) read
 {
   CBUUID *uuid_service = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
-  CBUUID *uuid_char = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVER_SEND_CHARACTERISTIC_UUID];
+  CBUUID *uuid_char = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
   
   [self readValue:uuid_service characteristicUUID:uuid_char p:activePeripheral];
 }
 
--(void) write:(NSData *)d
+-(void) write:(NSData *)data toUUID:(CBUUID *)uuid
 {
   CBUUID *uuid_service = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
-  CBUUID *uuid_char = [CBUUID UUIDWithString:@ENVISAS_COMMAND_CLIENT_SEND_CHARACTERISTIC_UUID];
   
-  [self writeValue:uuid_service characteristicUUID:uuid_char p:activePeripheral data:d];
+  [self writeValue:uuid_service characteristicUUID:uuid p:activePeripheral data:data];
 }
 
 -(void) writeValue:(CBUUID *)serviceUUID characteristicUUID:(CBUUID *)characteristicUUID p:(CBPeripheral *)p data:(NSData *)data
@@ -257,7 +256,7 @@ static int rssi = 0;
 -(void) enableReadNotification:(CBPeripheral *)p
 {
   CBUUID *uuid_service = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
-  CBUUID *uuid_char = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVER_SEND_CHARACTERISTIC_UUID];
+  CBUUID *uuid_char = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
   
   [self notification:uuid_service characteristicUUID:uuid_char p:p on:YES];
 }
@@ -286,7 +285,11 @@ static int rssi = 0;
     
     return;
   }
-  
+  NSLog(@"Setting notify on for characteristic with UUID %@ on service with UUID %@ on peripheral with UUID %@",
+        [BLEUtils CBUUIDToString:characteristicUUID],
+        [BLEUtils CBUUIDToString:serviceUUID],
+        p.identifier.UUIDString);
+
   [p setNotifyValue:on forCharacteristic:characteristic];
 }
 
@@ -467,39 +470,24 @@ static int rssi = 0;
   }
   else
   {
-    // This is effectively a reception method
-    
-    unsigned char data[20];
-    
-    static unsigned char buf[512];
-    static int len = 0;
-    NSInteger data_len;
+    // Log any characteristic updates
+//    if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:@ENVISAS_COMMAND_SPARE_CHARACTERISTIC_UUID]])
+//      NSLog(@"didUpdateValueForCharacteristic for %@",@ENVISAS_COMMAND_SPARE_CHARACTERISTIC_UUID);
+//
+//    if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID]])
+//      NSLog(@"didUpdateValueForCharacteristic for %@",@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID);
 
-    if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVER_SEND_CHARACTERISTIC_UUID]])
-    {
-      data_len = characteristic.value.length;
-      [characteristic.value getBytes:data length:data_len];
-      
-      if (data_len == 20)
-      {
-        memcpy(&buf[len], data, 20);
-        len += data_len;
-        
-        if (len >= 64)
-        {
-          [[self delegate] bleDidReceiveData:buf length:len];
-          len = 0;
-        }
+    // We use this characteristic to exchange messages with the peripheral, so pass the update
+    // along to the delegate
+    if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:@ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID]]) {
+//      NSLog(@"didUpdateValueForCharacteristic for %@",@ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID);
+      if (characteristic.value) {
+//        NSLog(@"read value got %lu data",[characteristic.value length]);
+        [[self delegate] bleHaveDataFor:characteristic];
+      } else {
+        NSLog(@"read value returned null characteristic.value");
       }
-      else if (data_len < 20)
-      {
-        memcpy(&buf[len], data, data_len);
-        len += data_len;
-        
-        [[self delegate] bleDidReceiveData:buf length:len];
-        len = 0;
-      }
-    }
+    } // if update for command messaging
   }
 }
 
@@ -557,6 +545,10 @@ static int rssi = 0;
     NSLog(@"Updated notification state for characteristic with UUID %@ on service with  UUID %@ for peripheral with UUID %@\r\n",
           [BLEUtils CBUUIDToString:characteristic.UUID],
           [BLEUtils CBUUIDToString:characteristic.service.UUID],peripheral.name);
+    if (characteristic.isNotifying)
+      NSLog(@"characteristic is notifying");
+    else
+      NSLog(@"characteristic is NOT NOTIFYING");
   }
 }
 

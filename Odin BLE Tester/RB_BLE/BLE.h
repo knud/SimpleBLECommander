@@ -24,7 +24,8 @@
 -(void) bleDidConnect;
 -(void) bleDidDisconnect;
 -(void) bleDidUpdateRSSI:(NSNumber *) rssi;
--(void) bleDidReceiveData:(unsigned char *) data length:(int) length;
+//-(void) bleDidReceiveData:(unsigned char *) data length:(int) length;
+-(void) bleHaveDataFor:(CBCharacteristic *)characteristic;
 -(void) bleCentralManagerStateChanged:(CBManagerState) state;
 -(void) bleServicesFound;
 -(void) bleServiceCharacteristicsFound;
@@ -62,7 +63,7 @@
 
 #pragma mark - Read and Write
 -(void) read;
--(void) write:(NSData *)d;
+-(void) write:(NSData *)data toUUID:(CBUUID *)uuid;
 -(void) writeValue:(CBUUID *)serviceUUID characteristicUUID:(CBUUID *)characteristicUUID p:(CBPeripheral *)p data:(NSData *)data;
 -(void) readValue: (CBUUID *)serviceUUID characteristicUUID:(CBUUID *)characteristicUUID p:(CBPeripheral *)p;
 -(void) enableReadNotification:(CBPeripheral *)p;

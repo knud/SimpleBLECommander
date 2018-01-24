@@ -2,8 +2,8 @@
 //  SecondViewController.m
 //  Odin BLE Tester
 //
-//  Created by Knud S Knudsen on 2017-12-29.
-//  Copyright © 2017 TechConficio. All rights reserved.
+//  Created by Knud S Knudsen on 2018-12-29.
+//  Copyright © 2018 Envisas Inc. All rights reserved.
 //
 
 #import "SecondViewController.h"

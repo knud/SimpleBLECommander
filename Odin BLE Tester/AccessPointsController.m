@@ -3,7 +3,7 @@
 //  Odin BLE Tester
 //
 //  Created by Knud S Knudsen on 2018-01-03.
-//  Copyright © 2018 TechConficio. All rights reserved.
+//  Copyright © 2018 Envisas Inc. All rights reserved.
 //
 
 #import "AccessPointsController.h"
@@ -14,7 +14,14 @@
 #import "EnvisasCommand.h"
 
 @interface AccessPointsController ()
-
+{
+  NSMutableArray<NSString *> *accessPoints;
+  NSMutableData *bleReceiverBuffer;
+  bool recStartFound;
+  bool recEndFound;
+  bool haveTx;
+  bool haveRx;
+}
 @end
 
 @implementation AccessPointsController
@@ -23,25 +30,25 @@
 @synthesize peripheral;
 @synthesize service;
 
-NSMutableArray<NSString *> *accessPoints;
-NSMutableData *bleReceiverBuffer;
-bool recStartFound = false;
-bool recEndFound = false;;
-
-bool haveTx = false;
-bool haveRx = false;
 
 - (void)viewDidLoad {
   [super viewDidLoad];
   
   NSLog(@"APC peripheral name is %@",self.peripheral.name);
   
+  haveTx = false;
+  haveRx = false;
+
+  // safe to initialize as nothing could have possibly been received yet
+  recStartFound = false;
+  recEndFound = false;;
+
   ble.delegate = self;
   
   bleReceiverBuffer=[[NSMutableData alloc] init];
   accessPoints = [[NSMutableArray<NSString *> alloc] init];
   
-  UIBarButtonItem *addAPButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addAcessPoint:)];
+  UIBarButtonItem *addAPButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addAccessPoint:)];
   [self navigationItem].rightBarButtonItem = addAPButton;
   [self navigationItem].title = @"Access Points";
   
@@ -148,8 +155,8 @@ bool haveRx = false;
 
 #pragma mark - UI actions
 
-- (IBAction)addAcessPoint:(id)sender {
-  NSLog(@"addAcessPoint");
+- (IBAction)addAccessPoint:(id)sender {
+  NSLog(@"addAccessPoint");
   
   // Always present the connected access point
   NSMutableArray *ssids = [[NSMutableArray alloc] initWithObjects:[self getConnectedAccessPoint], nil];
@@ -254,7 +261,8 @@ bool haveRx = false;
     uint8_t *dataBytes = (uint8_t *)[AAPCmd bytes];
     for (int i = 0; i < [AAPCmd length]; i++)
       printf("%02x\n",dataBytes[i]);
-    [self.ble write:AAPCmd];
+    CBUUID *uuid = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
+    [self.ble write:AAPCmd toUUID:uuid];
   }
 }
 
@@ -306,8 +314,8 @@ bool haveRx = false;
         if ([s.UUID.UUIDString isEqual:commandServiceUUID.UUIDString])
         {
           self.service = s;
-          CBUUID *clientSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_CLIENT_SEND_CHARACTERISTIC_UUID];
-          CBUUID *serverSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVER_SEND_CHARACTERISTIC_UUID];
+          CBUUID *clientSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SPARE_CHARACTERISTIC_UUID];
+          CBUUID *serverSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
           NSArray<CBUUID *> *characteristicUUIDs = [NSArray arrayWithObjects:clientSendServiceUUID,serverSendServiceUUID, nil];
           NSLog(@"  ->findCharacteristicsFrom");
           [self.ble findCharacteristicsFrom:self.peripheral characteristicUUIDs:(NSArray<CBUUID *> *)characteristicUUIDs];
@@ -321,8 +329,8 @@ bool haveRx = false;
 -(void) bleServiceCharacteristicsFound
 {
   NSLog(@"->bleServiceCharacteristicsFound");
-  CBUUID *clientSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_CLIENT_SEND_CHARACTERISTIC_UUID];
-  CBUUID *serverSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVER_SEND_CHARACTERISTIC_UUID];
+  CBUUID *clientSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SPARE_CHARACTERISTIC_UUID];
+  CBUUID *serverSendServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
   for (int i=0; i < self.service.characteristics.count; i++)
   {
     CBCharacteristic *c = [service.characteristics objectAtIndex:i];
@@ -344,14 +352,13 @@ bool haveRx = false;
   {
     EnvisasCommand * listAPsCommand = [[EnvisasCommand alloc] initWith:LIST_ACCESS_POINTS argument:NULL error:NULL];
     NSArray<NSString *> *lapCommandStrings = [listAPsCommand commandStrings];
-    //    EnvisasCommand * addAPCommand = [[EnvisasCommand alloc] initWith:ADD_ACCESS_POINT argument:@"01234567890123456789ssidssidssid passwordpasswordpasswordpassword" error:NULL];
-    //    NSArray<NSString *> *aapCommandStrings = [addAPCommand commandStrings];
     
     for (int i = 0; i < [lapCommandStrings count]; i++) {
       NSString *cmdStr = [lapCommandStrings objectAtIndex:i];
       NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
       NSLog(@"cmdStr = %@",cmdStr);
-      [self.ble write:cmdData];
+      CBUUID *uuid = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
+      [self.ble write:cmdData toUUID:uuid];
       [NSThread sleepForTimeInterval:0.05];
     }
     //    unsigned char listAccessPointsCommand[4] = {0x20, 0x30, 0x30, 0x30};
