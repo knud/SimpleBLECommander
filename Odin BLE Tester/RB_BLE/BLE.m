@@ -1,15 +1,11 @@
+//
+//  BLE.m
+//  Odin BLE Tester
+//
+//  Created by Knud S Knudsen on 2018-01-21.
+//  Copyright © 2018 Envisas Inc. All rights reserved.
+//
 
-/*
- 
- Copyright (c) 2013 RedBearLab
- 
- Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- 
- The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- 
- */
 
 #import "BLE.h"
 #import "BLEDefines.h"
@@ -20,6 +16,7 @@
 @synthesize delegate;
 @synthesize CM;
 @synthesize peripherals;
+@synthesize advertisingData;
 @synthesize activePeripheral;
 
 static bool isConnected = false;
@@ -53,13 +50,16 @@ static int rssi = 0;
     NSLog(@"State = %ld (%@)\r\n", (long) self.CM.state, [BLEUtils centralManagerStateToString:self.CM.state]);
     return -1;
   }
-  
+  [self.peripherals removeAllObjects];
+  [self.advertisingData removeAllObjects];
+
   [NSTimer scheduledTimerWithTimeInterval:(float)timeout target:self selector:@selector(scanTimer:) userInfo:nil repeats:NO];
   
   // set up find peripherals that provide specified service(s)
   // TODO seems to be broken currently, so find any peripheral and then filter in the delegate
 #if 0
   NSString *serviceUUIDStr = @ENVISAS_COMMAND_SERVICE_UUID;
+  NSLog(@"Scanning for service UUID %@",serviceUUIDStr);
   CBUUID *serviceUUID = [CBUUID UUIDWithString:serviceUUIDStr];
   NSArray<CBUUID *> *services = [NSArray arrayWithObjects:serviceUUIDStr, nil];
 #if TARGET_OS_IPHONE
@@ -93,6 +93,12 @@ static int rssi = 0;
   self.activePeripheral.delegate = self;
   [self.CM connectPeripheral:self.activePeripheral
                      options:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:CBConnectPeripheralOptionNotifyOnDisconnectionKey]];
+}
+
+-(void) disconnectPeripheral:(CBPeripheral *)peripheral
+{
+  if (self.activePeripheral == peripheral)
+    [self.CM cancelPeripheralConnection:peripheral];
 }
 
 -(BOOL) isConnected
@@ -315,7 +321,8 @@ static int rssi = 0;
     NSLog(@"Disconnected from peripheral with unknown UUID ");
   if (error)
     NSLog(@"Error code was %s", [[error description] cStringUsingEncoding:NSStringEncodingConversionAllowLossy]);
-  [[self delegate] bleDidDisconnect];
+  if ([self delegate])
+    [[self delegate] bleDidDisconnect];
   isConnected = false;
 }
 
@@ -336,7 +343,9 @@ static int rssi = 0;
 {
   NSLog(@"new peripheraal with RSSI %@",RSSI);
   if (!self.peripherals)
-    self.peripherals = [[NSMutableArray alloc] initWithObjects:peripheral,nil];
+    self.peripherals = [[NSMutableArray alloc] initWithCapacity:1];
+  if (!self.advertisingData)
+    self.advertisingData = [[NSMutableArray alloc] initWithCapacity:1];
   for(int i = 0; i < self.peripherals.count; i++)
   {
     CBPeripheral *p = [self.peripherals objectAtIndex:i];
@@ -351,8 +360,14 @@ static int rssi = 0;
       return;
     }
   }
-  
-  [self.peripherals addObject:peripheral];
+  if (peripheral.name) {
+    NSLog(@" ------- adding peripheral %@",peripheral.name);
+    [self.peripherals addObject:peripheral];
+    if (advertisingData)
+      [self.advertisingData addObject:advertisementData];
+    else
+      NSLog(@"advertising data is nil");
+  }
 }
 
 #pragma mark - CBCentralManagerDelegate monitoring changes to the central manager's state

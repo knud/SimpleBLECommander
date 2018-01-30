@@ -12,6 +12,7 @@
 
 @interface BagContentsController ()
 {
+  UIActivityIndicatorView *bagScanningIndicator;
   NSMutableArray<NSString *> *tags;
   NSMutableData *bleReceiverBuffer;
   int bleDataCount;
@@ -28,15 +29,15 @@
 
 
 - (void)viewDidLoad {
-    [super viewDidLoad];
-    
-  NSLog(@"BagContentsController using peripheral %@",self.peripheral.name);
+  [super viewDidLoad];
   
+  NSLog(@"BagContentsController using peripheral %@",self.peripheral.name);
   
   // safe to initialize as nothing could have possibly been received yet
   recStartFound = false;
   recEndFound = false;;
-
+  
+  ble = [BLE sharedInstance];
   ble.delegate = self;
   
   bleReceiverBuffer=[[NSMutableData alloc] init];
@@ -47,19 +48,23 @@
   UIBarButtonItem *configButton = [[UIBarButtonItem alloc] initWithImage:configImage style:UIBarButtonItemStylePlain target:self action:@selector(configure:)];
   [self navigationItem].rightBarButtonItem = configButton;
   
-  if (ble.activePeripheral)
-  {
-    if(ble.activePeripheral.state == CBPeripheralStateConnected)
-    {
-      NSLog(@"What? Got an active peripheral. Disconnecting...");
-      [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
-    } else
-    {
-      if (self.peripheral)
-        [ble connectPeripheral:self.peripheral];
-    }
-  }
+  UIBarButtonItem *backButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Previous" style:UIBarButtonItemStylePlain target:nil action:nil];
+  [self navigationItem].backBarButtonItem = backButtonItem;
   
+  bagScanningIndicator = [[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+  bagScanningIndicator.frame = CGRectMake(0.0, 0.0, 80.0, 80.0);
+  bagScanningIndicator.center = self.view.center;
+  [self.view addSubview:bagScanningIndicator];
+  [bagScanningIndicator bringSubviewToFront:self.view];
+  
+  [UIApplication sharedApplication].networkActivityIndicatorVisible = TRUE;
+  if (self.peripheral)
+    [ble connectPeripheral:self.peripheral];
+}
+
+- (void) viewWillAppear:(BOOL)animated
+{
+  ble.delegate = self;
 }
 
 - (void) viewDidDisappear:(BOOL)animated
@@ -72,22 +77,21 @@
       [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
     }
   }
-  ble = nil;
 }
 
 - (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+  [super didReceiveMemoryWarning];
+  // Dispose of any resources that can be recreated.
 }
 
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return 1;
+  return 1;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return [tags count];
+  return [tags count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -118,14 +122,14 @@
 
 
 /*
-#pragma mark - Navigation
-
-// In a storyboard-based application, you will often want to do a little preparation before navigation
-- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-    // Get the new view controller using [segue destinationViewController].
-    // Pass the selected object to the new view controller.
-}
-*/
+ #pragma mark - Navigation
+ 
+ // In a storyboard-based application, you will often want to do a little preparation before navigation
+ - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+ // Get the new view controller using [segue destinationViewController].
+ // Pass the selected object to the new view controller.
+ }
+ */
 
 #pragma mark - BLE delegate
 
@@ -142,9 +146,7 @@
 
 - (void)bleDidDisconnect
 {
-  NSLog(@"->Disconnected. Connecting to proper peripheral");
-  if (self.peripheral)
-    [ble connectPeripheral:self.peripheral];
+  NSLog(@"->Disconnected");
 }
 
 -(void) bleServicesFound;
@@ -207,10 +209,10 @@
       printf("  has indicate encryption required\n");
     if (c.properties & CBCharacteristicPropertyAuthenticatedSignedWrites)
       printf("  has authenticated signed writes\n");
-
+    
     // Ignore the spare for now...
     if ([c.UUID.UUIDString isEqual:commandSpareCharacteristicUUID.UUIDString]) {}
-
+    
     if ([c.UUID.UUIDString isEqual:commandInvokeCharacteristicUUID.UUIDString])
     {
       // enable notification for this characteristic on the peripheral
@@ -222,6 +224,13 @@
       
       //    EnvisasCommand * listAPsCommand = [[EnvisasCommand alloc] initWith:LIST_ACCESS_POINTS argument:NULL error:NULL];
       //    NSArray<NSString *> *commandStrings = [listAPsCommand commandStrings];
+
+      [bagScanningIndicator startAnimating];
+//      [self.navigationController.navigationItem.backBarButtonItem setEnabled:NO];
+      [self.navigationItem.backBarButtonItem setEnabled:NO];
+      // TODO replace 11 and 10 above with proper programmtic value
+      [NSTimer scheduledTimerWithTimeInterval:(float)11.0 target:self selector:@selector(bagScanningTimer:) userInfo:nil repeats:NO];
+
       
       // TODO could move this into a method to handle command strings?
       CBUUID *uuid = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
@@ -230,7 +239,7 @@
         NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
         NSLog(@"cmdStr = %@",cmdStr);
         [self.ble write:cmdData toUUID:uuid];
-        [NSThread sleepForTimeInterval:0.05];
+//        [NSThread sleepForTimeInterval:0.05];
       }
     }
     if ([c.UUID.UUIDString isEqual:commandResponseCharacteristicUUID.UUIDString])
@@ -241,6 +250,13 @@
   }
 }
 
+-(void) bagScanningTimer:(NSTimer *)timer
+{
+  // reset the right bar button
+  [bagScanningIndicator stopAnimating];
+  [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
+}
+
 -(void) bleHaveDataFor:(CBCharacteristic *)characteristic
 {
   // paranoid check
@@ -249,7 +265,7 @@
     {
       if (bleDataCount <= 0) {
         NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
-//        NSLog(@"bleHaveDataFor received %@",cv);
+        //        NSLog(@"bleHaveDataFor received %@",cv);
         NSRange prefixRange = [cv rangeOfString:@"dataAvailable" options:(NSAnchoredSearch | NSCaseInsensitiveSearch)];
         if (prefixRange.length > 0) {
           // new data is available
@@ -261,22 +277,24 @@
           [self.ble.activePeripheral readValueForCharacteristic:characteristic];
         }
       } else {
-//        NSLog(@"bleHaveDataFor received %lu bytes",[characteristic.value length]);
+        //        NSLog(@"bleHaveDataFor received %lu bytes",[characteristic.value length]);
         [bleReceiverBuffer appendData:characteristic.value];
         bleDataCount -= [characteristic.value length];
-//        const char * rxBytes = [characteristic.value bytes];
-//        for (int i = 0; i < [characteristic.value length]; i++)
-//        {
-//          printf("%c",rxBytes[i]);
-//        }
-//        printf("\n\n");
-
+        //        const char * rxBytes = [characteristic.value bytes];
+        //        for (int i = 0; i < [characteristic.value length]; i++)
+        //        {
+        //          printf("%c",rxBytes[i]);
+        //        }
+        //        printf("\n\n");
+        
         if (bleDataCount > 0) {
           // ask for more data
           [self.ble.activePeripheral readValueForCharacteristic:characteristic];
         } else {
           NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
           [self parseResponse:bleReceiverBuffer];
+          [bagScanningIndicator stopAnimating];
+          [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
         }
       }
     }
@@ -292,7 +310,7 @@
   NSData * commandResponse;
   NSData * commandEnd;
   NSData * commandResult;
-
+  
   NSString *temp = [[NSString alloc] initWithData:bleReceiverBuffer encoding:NSUTF8StringEncoding];
   NSLog(@" temp string = %@",temp);
   // TODO parse the data!
@@ -341,7 +359,7 @@
       // "name" key always refers to a string, so no need to check
       NSString *name = [respDict valueForKey:@"name"];
       NSLog(@"name = %@",name);
-
+      
       // check for tags list
       if ([name compare:@"inventory"] == 0) {
         // inventory messages are either JSON arrays or strings
@@ -368,7 +386,7 @@
               NSLog(@"  %@",[data objectAtIndex:i]);
             }
             [self.tableView reloadData];
-          } // if access_points
+          } // if array
         }
       } // name is "inventory"
       else {
@@ -382,7 +400,7 @@
           }
         }
       } // name is not "inventory"
-
+      
     }
   }
 }

@@ -24,3 +24,4 @@
 // This characteristic is used for receiving responses from the peripheral
 #define ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID "E92C0003-98A5-42E0-B06E-839F2D1D4102"
 
+#define BLE_DEVICE_NAME "Envisas"

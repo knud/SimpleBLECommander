@@ -11,22 +11,13 @@
 #import "BLE.h"
 
 @interface BagController : UITableViewController <BLEDelegate>
-{
-  UIActivityIndicatorView *activityIndicator;
-  UIBarButtonItem *refreshBarButton;
-  UIBarButtonItem *busyBarButton;
-}
 
 - (void) scanForPeripherals;
 
-
-
 @property (strong, nonatomic) BLE *ble;
+@property (weak, nonatomic) CBPeripheral *peripheral;
+@property (strong, nonatomic) CBService *service;
 @property NSMutableArray* bags;
-@property NSArray<CBUUID *> *targetPeripheralServices;
-@property NSInteger currentPeripheral;
-
-@property bool scanningForPeripherals;
 
 - (IBAction)refreshBags:(id)sender;
 

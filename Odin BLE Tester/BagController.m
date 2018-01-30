@@ -14,6 +14,13 @@
 #import "BagContentsController.h"
 
 @interface BagController ()
+{
+  CBUUID *targetPeripheralService;
+  bool scanningForPeripherals;
+  UIActivityIndicatorView *activityIndicator;
+  UIBarButtonItem *refreshBarButton;
+  UIBarButtonItem *busyBarButton;
+}
 
 @end
 
@@ -30,10 +37,8 @@
   // Make a list of services that a peripheral has to have for us to care.
   // Only have the one to date...
   NSString *serviceUUIDStr = @ENVISAS_COMMAND_SERVICE_UUID;
-  CBUUID *serviceUUID = [CBUUID UUIDWithString:serviceUUIDStr];
-  self.targetPeripheralServices = [NSArray arrayWithObjects:serviceUUID, nil];
-  self.scanningForPeripherals = false;
-  self.currentPeripheral = -1;
+  targetPeripheralService = [CBUUID UUIDWithString:serviceUUIDStr];
+  scanningForPeripherals = false;
 
   busyBarButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:nil action:nil];
   activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
@@ -43,23 +48,22 @@
   refreshBarButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(refreshBags:)];
   [self navigationItem].rightBarButtonItem = refreshBarButton;
   [self.navigationItem.rightBarButtonItem setEnabled:false];
-
   
   ble = [BLE sharedInstance];
   ble.delegate = self;
-  
-  // Uncomment the following line to preserve selection between presentations.
-  // self.clearsSelectionOnViewWillAppear = NO;
-  
-  // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-  // self.navigationItem.rightBarButtonItem = self.editButtonItem;
 }
 
 - (void) viewWillAppear:(BOOL)animated
 {
   ble.delegate = self;
 }
-- (void)didReceiveMemoryWarning {
+
+- (void) viewWillDisappear:(BOOL)animated
+{
+}
+
+- (void)didReceiveMemoryWarning
+{
   [super didReceiveMemoryWarning];
   // Dispose of any resources that can be recreated.
 }
@@ -74,10 +78,13 @@
   return [self.bags count];
 }
 
+// TODO placeholder. Might do somthing interesting later...
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+//  UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+}
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-  NSLog(@"cellForRowAtIndexPath");
-
   static NSString *cellIdentifier = @"BagCell";
   UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier forIndexPath:indexPath];
   
@@ -95,7 +102,12 @@
   [cell.detailTextLabel setText:[peripheral.identifier UUIDString]];
   BagTableViewCell *bcell = (BagTableViewCell *) cell;
   [bcell setPeripheral:peripheral];
-  
+  if(scanningForPeripherals) {
+    [bcell setUserInteractionEnabled:NO];
+  } else {
+    [bcell setUserInteractionEnabled:YES];
+  }
+
   return cell;
 }
 
@@ -111,13 +123,13 @@
      
      BagTableViewCell *cell = (BagTableViewCell *) sender;
      
-     [bcc setBle:self.ble];
      [bcc setPeripheral:cell.peripheral];
+
+     // Paranoia. Should never be connected.
      if (ble.activePeripheral)
        if(ble.activePeripheral.state == CBPeripheralStateConnected)
          [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
    }
- // Pass the selected object to the new view controller.
  }
 
 #pragma mark - UI actions
@@ -130,6 +142,38 @@
   [activityIndicator startAnimating];
 
   [self scanForPeripherals];
+}
+
+#pragma mark - BLE actions
+
+- (void) scanForPeripherals
+{
+  scanningForPeripherals = true;
+  if (ble.activePeripheral)
+    if(ble.activePeripheral.state == CBPeripheralStateConnected)
+    {
+      [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
+      return;
+    }
+  
+  if (ble.peripherals)
+    ble.peripherals = nil;
+  
+  [self.bags removeAllObjects];
+  [self.tableView reloadData];
+
+  [ble findPeripherals:4];
+  
+  [NSTimer scheduledTimerWithTimeInterval:(float)6.0 target:self selector:@selector(connectionTimer:) userInfo:nil repeats:NO];
+}
+
+-(void) connectionTimer:(NSTimer *)timer
+{
+  // reset the right bar button
+  [activityIndicator stopAnimating];
+  [self navigationItem].rightBarButtonItem = refreshBarButton;
+  scanningForPeripherals = false;
+  [self.tableView reloadData];
 }
 
 #pragma mark - BLE delegate methods
@@ -159,152 +203,45 @@
   }
 }
 
-#pragma mark - BLE actions
-
-- (void) scanForPeripherals
+-(void) bleFindPeripheralsFinished
 {
-  self.scanningForPeripherals = true;
-  if (ble.activePeripheral)
-    if(ble.activePeripheral.state == CBPeripheralStateConnected)
-    {
-      [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
-      return;
+  
+  if (self.ble.peripherals) {
+    for (int i = 0; i < [self.ble.peripherals count]; i++) {
+      CBPeripheral *p = [self.ble.peripherals objectAtIndex:i];
+      NSDictionary *ad = [self.ble.advertisingData objectAtIndex:i];
+      NSString *deviceName = [ad valueForKey:CBAdvertisementDataLocalNameKey];
+      if (deviceName)
+      {
+        if ([deviceName compare:@BLE_DEVICE_NAME] == NSOrderedSame) {
+          NSLog(@"Got peripheral %@",deviceName);
+          self.peripheral = p;
+          [self.bags addObject:p];
+          [self.tableView reloadData];
+        }
+      }
     }
-  
-  if (ble.peripherals)
-    ble.peripherals = nil;
-
-  [ble findPeripherals:2];
-  
-  [NSTimer scheduledTimerWithTimeInterval:(float)2.0 target:self selector:@selector(connectionTimer:) userInfo:nil repeats:NO];
-  
-}
-
--(void) connectionTimer:(NSTimer *)timer
-{
-
-  NSLog(@"connectionTimer");
-  // reset the right bar button
-  [activityIndicator stopAnimating];
-  [self navigationItem].rightBarButtonItem = refreshBarButton;
-
-  if (ble.peripherals.count > 0) {
-    self.currentPeripheral = 0;
-
-    // connect and check each peripheral for our services
-    [ble connectPeripheral:[ble.peripherals objectAtIndex:self.currentPeripheral]];
-//    NSLog(@"reload data");
-//    [self.tableView reloadData];
-  } else {
   }
 }
 
-#pragma mark - BLE delegate
-
 // When connected, this will be called
--(void) bleDidConnect
-{
-  NSLog(@"->Connected");
-//  NSArray<CBService *> *services = [[ble.peripherals objectAtIndex:0] services];
-//  NSLog(@"found %lu services",(unsigned long)services.count);
-
-  if (self.currentPeripheral >= 0)
-    [ble findServicesFrom:[ble.peripherals objectAtIndex:self.currentPeripheral] services:self.targetPeripheralServices];
-//  // send reset
-//  UInt8 buf[] = {0x04, 0x00, 0x00};
-//  NSData *data = [[NSData alloc] initWithBytes:buf length:3];
-//  [ble write:data];
-  
-  // Schedule to read RSSI every 1 sec.
-//  rssiTimer = [NSTimer scheduledTimerWithTimeInterval:(float)1.0 target:self selector:@selector(readRSSITimer:) userInfo:nil repeats:YES];
-}
-
-NSTimer *rssiTimer;
+//-(void) bleDidConnect
+//{
+//}
 
 - (void)bleDidDisconnect
 {
   NSLog(@"->Disconnected");
-  
-  if (self.scanningForPeripherals) {
-    self.scanningForPeripherals = false;
-    [self scanForPeripherals];
-  }
-
-  if (self.currentPeripheral < ble.peripherals.count)
-  {
-    NSLog(@"current peripheral %ld",(long)self.currentPeripheral);
-    [ble connectPeripheral:[ble.peripherals objectAtIndex:self.currentPeripheral]];
-  } else
-    self.currentPeripheral = -1;
-
-  // TODO need this?
-//  [rssiTimer invalidate];
 }
 
 // When RSSI is changed, this will be called
--(void) bleDidUpdateRSSI:(NSNumber *) rssi
-{
-//  lblRSSI.text = rssi.stringValue;
-}
+//-(void) bleDidUpdateRSSI:(NSNumber *) rssi
+//{
+//}
 
--(void) readRSSITimer:(NSTimer *)timer
-{
-  [ble readRSSI];
-}
-
-// When data is comming, this will be called
--(void) bleDidReceiveData:(unsigned char *)data length:(int)length
-{
-  NSLog(@"Length: %d", length);
-  
-  // parse data, all commands are in 3-byte
-//  for (int i = 0; i < length; i+=3)
-//  {
-//    NSLog(@"0x%02X, 0x%02X, 0x%02X", data[i], data[i+1], data[i+2]);
-//
-//    if (data[i] == 0x0A)
-//    {
-//      if (data[i+1] == 0x01)
-//        swDigitalIn.on = true;
-//      else
-//        swDigitalIn.on = false;
-//    }
-//    else if (data[i] == 0x0B)
-//    {
-//      UInt16 Value;
-//
-//      Value = data[i+2] | data[i+1] << 8;
-//      lblAnalogIn.text = [NSString stringWithFormat:@"%d", Value];
-//    }
-//  }
-}
-
--(void) bleServicesFound;
-{
-  if (self.currentPeripheral >= 0)
-  {
-    CBPeripheral *p = [ble.peripherals objectAtIndex:self.currentPeripheral];
-    if (p.services)
-    {
-      long numServices = [p.services count];
-      NSLog(@"%ld services found", numServices);
-      if (p.services.count > 0)
-      {
-        [self.bags addObject:p];
-        [self.tableView reloadData];
-      }
-    }
-    // check the next peripheral
-    self.currentPeripheral++;
-    if (ble.activePeripheral)
-      if(ble.activePeripheral.state == CBPeripheralStateConnected)
-        [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
-  }
-}
-
--(void) bleFindPeripheralsFinished
-{
-  self.scanningForPeripherals = false;
-}
+//-(void) readRSSITimer:(NSTimer *)timer
+//{
+//  [ble readRSSI];
+//}
 
 @end
