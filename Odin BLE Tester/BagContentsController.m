@@ -217,7 +217,7 @@
       [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
       
       // We need a list of tags, so issue an inventory command
-      EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"005" error:NULL];
+      EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
       NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
       
       //    EnvisasCommand * listAPsCommand = [[EnvisasCommand alloc] initWith:LIST_ACCESS_POINTS argument:NULL error:NULL];
@@ -350,6 +350,7 @@
           if ([value isKindOfClass:[NSString class]])
           {
             NSString *invString = (NSString *) value;
+            NSLog(@"invString = %@",invString);
             if ([invString componentsSeparatedByString:@"end"] == 0)
             {
               NSLog(@"No more tags...");

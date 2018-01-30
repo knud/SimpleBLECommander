@@ -337,27 +337,22 @@ static int rssi = 0;
   NSLog(@"new peripheraal with RSSI %@",RSSI);
   if (!self.peripherals)
     self.peripherals = [[NSMutableArray alloc] initWithObjects:peripheral,nil];
-  else
+  for(int i = 0; i < self.peripherals.count; i++)
   {
-    for(int i = 0; i < self.peripherals.count; i++)
+    CBPeripheral *p = [self.peripherals objectAtIndex:i];
+    
+    if ((p.identifier == NULL) || (peripheral.identifier == NULL))
+      continue;
+    
+    if ([BLEUtils equal:p.identifier UUID2:peripheral.identifier])
     {
-      CBPeripheral *p = [self.peripherals objectAtIndex:i];
-      
-      if ((p.identifier == NULL) || (peripheral.identifier == NULL))
-        continue;
-      
-      if ([BLEUtils equal:p.identifier UUID2:peripheral.identifier])
-      {
-        [self.peripherals replaceObjectAtIndex:i withObject:peripheral];
-        NSLog(@"Duplicate UUID found updating...");
-        return;
-      }
+      [self.peripherals replaceObjectAtIndex:i withObject:peripheral];
+      NSLog(@"Duplicate UUID found updating...");
+      return;
     }
-    
-    [self.peripherals addObject:peripheral];
-    
-    NSLog(@"New UUID, adding");
   }
+  
+  [self.peripherals addObject:peripheral];
 }
 
 #pragma mark - CBCentralManagerDelegate monitoring changes to the central manager's state
