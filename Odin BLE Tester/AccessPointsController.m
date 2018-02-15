@@ -51,7 +51,7 @@
   UIBarButtonItem *addAPButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addAccessPoint:)];
   [self navigationItem].rightBarButtonItem = addAPButton;
   [self navigationItem].title = @"Access Points";
-  
+    
   if (ble.activePeripheral)
   {
     if(ble.activePeripheral.state == CBPeripheralStateConnected)

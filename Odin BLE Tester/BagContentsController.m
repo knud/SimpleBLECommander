@@ -6,6 +6,7 @@
 //  Copyright © 2018 Envisas Inc. All rights reserved.
 //
 
+#import "AccessPointsController.h"
 #import "BagContentsController.h"
 #import "BLEDefines.h"
 #import "EnvisasCommand.h"
@@ -44,15 +45,8 @@
   bleDataCount = 0;
   tags = [[NSMutableArray<NSString *> alloc] init];
   
-  UIImage *configImage = [UIImage imageNamed:@"spanner.png"];
-  UIBarButtonItem *configButton = [[UIBarButtonItem alloc] initWithImage:configImage style:UIBarButtonItemStylePlain target:self action:@selector(configure:)];
-  [self navigationItem].rightBarButtonItem = configButton;
-  
-  UIBarButtonItem *backButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Previous" style:UIBarButtonItemStylePlain target:nil action:nil];
-  [self navigationItem].backBarButtonItem = backButtonItem;
-  
   bagScanningIndicator = [[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
-  bagScanningIndicator.frame = CGRectMake(0.0, 0.0, 80.0, 80.0);
+  bagScanningIndicator.frame = CGRectMake(0.0, 0.0, 180.0, 180.0);
   bagScanningIndicator.center = self.view.center;
   [self.view addSubview:bagScanningIndicator];
   [bagScanningIndicator bringSubviewToFront:self.view];
@@ -96,8 +90,13 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   
-  static NSString *cellIdentifier = @"BagContentsCell";
+  NSString *cellIdentifier;
   
+  if (indexPath.row == 0)
+    cellIdentifier = @"StatusCell";
+  else
+    cellIdentifier = @"BagContentsCell";
+
   UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier forIndexPath:indexPath];
   
   if (cell == nil) {
@@ -105,14 +104,33 @@
             initWithStyle:UITableViewCellStyleDefault
             reuseIdentifier:cellIdentifier];
   }
-  
-  NSString *tagName = [tags objectAtIndex:indexPath.row];
-  
-  [cell.textLabel setText:tagName];
-  [cell.detailTextLabel setText:@"could put something here..."];
-  
+
+  if (indexPath.row == 0) {
+    
+  } else {
+    NSString *tagName = [tags objectAtIndex:indexPath.row];
+    
+    [cell.textLabel setText:tagName];
+    [cell.detailTextLabel setText:@"could put something here..."];
+  }
+
   return cell;
 }
+
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+  if ([[segue identifier] isEqualToString:@"accessPointsSegue"]) {
+    NSLog(@"[BagContentsController] accessPointsSegue ");
+    // Get the new view controller using [segue destinationViewController].
+    AccessPointsController *apc = [segue destinationViewController];
+    
+    [apc setPeripheral:self.peripheral];
+  }
+}
+
+
 
 #pragma mark - UI actions
 
@@ -222,11 +240,10 @@
       EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
       NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
       
-      //    EnvisasCommand * listAPsCommand = [[EnvisasCommand alloc] initWith:LIST_ACCESS_POINTS argument:NULL error:NULL];
-      //    NSArray<NSString *> *commandStrings = [listAPsCommand commandStrings];
+//      EnvisasCommand * readerStatusCommand = [[EnvisasCommand alloc] initWith:READER_STATUS argument:NULL error:NULL];
+//      NSArray<NSString *> *commandStrings = [readerStatusCommand commandStrings];
 
       [bagScanningIndicator startAnimating];
-//      [self.navigationController.navigationItem.backBarButtonItem setEnabled:NO];
       [self.navigationItem.backBarButtonItem setEnabled:NO];
       // TODO replace 11 and 10 above with proper programmtic value
       [NSTimer scheduledTimerWithTimeInterval:(float)11.0 target:self selector:@selector(bagScanningTimer:) userInfo:nil repeats:NO];
@@ -277,15 +294,8 @@
           [self.ble.activePeripheral readValueForCharacteristic:characteristic];
         }
       } else {
-        //        NSLog(@"bleHaveDataFor received %lu bytes",[characteristic.value length]);
         [bleReceiverBuffer appendData:characteristic.value];
         bleDataCount -= [characteristic.value length];
-        //        const char * rxBytes = [characteristic.value bytes];
-        //        for (int i = 0; i < [characteristic.value length]; i++)
-        //        {
-        //          printf("%c",rxBytes[i]);
-        //        }
-        //        printf("\n\n");
         
         if (bleDataCount > 0) {
           // ask for more data
