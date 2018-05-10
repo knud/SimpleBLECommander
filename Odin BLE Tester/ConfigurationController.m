@@ -1,11 +1,12 @@
 //
-//  AccessPointsController.m
+//  AccessPointsTableViewController.m
 //  Odin BLE Tester
 //
 //  Created by Knud S Knudsen on 2018-01-03.
 //  Copyright © 2018 Envisas Inc. All rights reserved.
 //
 
+#import "ConfigurationController.h"
 #import "AccessPointsController.h"
 #import <SystemConfiguration/CaptiveNetwork.h>
 #import "PickerView.h"
@@ -13,19 +14,23 @@
 #import "EnvisasSupport/EnvisasAccessPointSecurity.h"
 #import "EnvisasCommand.h"
 
-@interface AccessPointsController ()
+@interface ConfigurationController ()
 {
-  NSMutableArray<NSString *> *accessPoints;
   NSMutableData *bleReceiverBuffer;
   int bleDataCount;
   bool recStartFound;
   bool recEndFound;
   bool haveCommandInvoke;
   bool haveCommandResponse;
+  NSUInteger uptime;
+  bool externalPower;
+  NSUInteger lastSession;
+  NSUInteger batteryLevel;
+  NSUInteger timeUntilCharge;
 }
 @end
 
-@implementation AccessPointsController
+@implementation ConfigurationController
 
 @synthesize ble;
 @synthesize peripheral;
@@ -35,10 +40,16 @@
 - (void)viewDidLoad {
   [super viewDidLoad];
   
-  NSLog(@"AccessPoints peripheral name is %@",self.peripheral.name);
+  NSLog(@"Configuration peripheral name is %@",self.peripheral.name);
   
   haveCommandInvoke = false;
   haveCommandResponse = false;
+
+  uptime = 0;
+  externalPower = false;
+  lastSession = 0;
+  batteryLevel = 0;
+  timeUntilCharge = 0;
 
   // safe to initialize as nothing could have possibly been received yet
   recStartFound = false;
@@ -48,20 +59,11 @@
   ble.delegate = self;
 
   bleReceiverBuffer=[[NSMutableData alloc] init];
-  accessPoints = [[NSMutableArray<NSString *> alloc] init];
-  
-  UIBarButtonItem *addAPButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addAccessPoint:)];
-  [self navigationItem].rightBarButtonItem = addAPButton;
-  
+
   CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
   NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
   NSLog(@"  calling findServicesFrom");
   [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
-}
-
-- (void) viewWillAppear:(BOOL)animated
-{
-  [super viewWillAppear:animated];
 }
 
 - (void) viewDidDisappear:(BOOL)animated
@@ -82,19 +84,16 @@
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
 {
   if (section == 0)
-    return @"App is connected to...";
+    return @"Status";
   else
-    return @"Reader Access Points";
+    return @"Internet Connection";
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
   if (section == 0)
-    return 1;
+    return 3;
   else
-  {
-    NSLog(@"%lu rows in table",(unsigned long)[accessPoints count]);
-    return [accessPoints count];
-  }
+    return 1;
 }
 
 
@@ -103,8 +102,9 @@
   
   UITableViewCell *cell;
   NSString *cellIdentifier;
+  
   if (indexPath.section == 0)
-    cellIdentifier = @"phoneAPCell";
+    cellIdentifier = @"StatusCell";
   else
     cellIdentifier = @"APCell";
 
@@ -116,30 +116,51 @@
             reuseIdentifier:cellIdentifier];
   }
   
+//  NSString *ap = [accessPoints objectAtIndex:indexPath.row];
+  
   if (indexPath.section == 0) {
+    // status section
+//    uptime = 0;
+//    externalPower = false;
+//    lastSession = 0;
+//    batteryLevel = 0;
+//    timeUntilCharge = 0;
     UILabel *label = (UILabel *)[cell viewWithTag:1];
-    NSString *connectedAPName = [self getConnectedAccessPoint];
-    if (connectedAPName != nil) {
-      cell.imageView.image = [UIImage imageNamed:@"55-wifi-green.png"];
-      label.text = connectedAPName;
-    } else {
-      cell.imageView.image = [UIImage imageNamed:@"55-wifi-red.png"];
-      label.text = @"not connected";
+    if (indexPath.row == 0) {
+      if (externalPower)
+        cell.imageView.image = [UIImage imageNamed:@"battery_charge.png"];
+      else {
+        if (batteryLevel > 95)
+          cell.imageView.image = [UIImage imageNamed:@"battery_full.png"];
+        else if (batteryLevel > 50)
+          cell.imageView.image = [UIImage imageNamed:@"battery_half.png"];
+        else
+          cell.imageView.image = [UIImage imageNamed:@"battery_low.png"];
+      }
+      label.text = [NSString stringWithFormat:@"%lu%%",(unsigned long) batteryLevel];
+    }
+    if (indexPath.row == 1) {
+      if (externalPower) {
+        cell.imageView.image = [UIImage imageNamed:@"396-power-plug.png"];
+        label.text = @"External Power";
+      }
+      else {
+        cell.imageView.image = [UIImage imageNamed:@"49-battery.png"];
+        label.text = @"Battery";
+      }
+    }
+    if (indexPath.row == 2) {
+      cell.imageView.image = [UIImage imageNamed:@"310-alarm-clock.png"];
+      label.text = @"Last session : 2 hours ago";
     }
   }
   else {
-    NSString *ap = [accessPoints objectAtIndex:indexPath.row];
-    NSArray *apElements = [ap componentsSeparatedByString:@","];
-    
-    if ([[apElements objectAtIndex:1] caseInsensitiveCompare:@"F"] == NSOrderedSame)
-      cell.imageView.image = [UIImage imageNamed:@"55-wifi-red.png"];
-    else
-      cell.imageView.image = [UIImage imageNamed:@"55-wifi-green.png"];
+    // access point section
+    cell.imageView.image = [UIImage imageNamed:@"55-wifi.png"];
     UILabel *label;
     
     label = (UILabel *)[cell viewWithTag:1];
-    label.text = [apElements objectAtIndex:0];
-    
+    label.text = @"ubnt";
   }
   return cell;
 }
@@ -179,128 +200,21 @@
  }
  */
 
+/*
 #pragma mark - UI actions
-
-- (IBAction)addAccessPoint:(id)sender {
-  NSLog(@"addAccessPoint");
-  
-  // Always present the connected access point
-  NSMutableArray *ssids = [[NSMutableArray alloc] initWithObjects:[self getConnectedAccessPoint], nil];
-  
-  // Pretend we somehow know some other APs...
-  [ssids addObject:@"fooAP"];
-  [ssids addObject:@"barAP"];
-  [ssids addObject:@"01234567890123456789012345678932"];
-  
-  [PickerView showPickerWithOptions:ssids title:@"Select Access Point" selectionBlock:^(NSString *accessPointName) {
-    NSLog(@"Selected Access Point : %@",accessPointName);
-    if (self.presentedViewController != nil)
-      [self.presentedViewController dismissViewControllerAnimated:true completion:nil];
-    [self accessPointPassword:accessPointName];
-  }];
-}
-
--(void) accessPointPassword:(NSString *) ap {
-  NSString *title = [@"Password for " stringByAppendingString:ap];
-  UIAlertController * alertController = [UIAlertController alertControllerWithTitle: title
-                                                                            message: @"Enter Password"
-                                                                     preferredStyle:UIAlertControllerStyleAlert];
-  [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-    textField.placeholder = @"password";
-    textField.textColor = [UIColor blueColor];
-    textField.clearButtonMode = UITextFieldViewModeWhileEditing;
-    textField.borderStyle = UITextBorderStyleRoundedRect;
-    textField.secureTextEntry = YES;
-  }];
-  UIAlertAction *cancelAction = [UIAlertAction
-                                 actionWithTitle:NSLocalizedString(@"Cancel", @"Cancel action")
-                                 style:UIAlertActionStyleCancel
-                                 handler:^(UIAlertAction *action)
-                                 {
-                                   NSLog(@"Cancel action");
-                                 }];
-  UIAlertAction *okayAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-    NSArray * textfields = alertController.textFields;
-    UITextField * passwordfield = textfields[0];
-    NSLog(@"%@",passwordfield.text);
-    if ([passwordfield.text length] > 0)
-      [self addReaderAP:ap password:passwordfield.text];
-  }];
-  
-  [alertController addAction:cancelAction];
-  [alertController addAction:okayAction];
-  [self presentViewController:alertController animated:YES completion:nil];
-}
-
-#pragma mark - Access Points Support
-
-// TODO this is not robust; purely happy path
-- (NSString *) getConnectedAccessPoint
-{
-  CFArrayRef myArray = CNCopySupportedInterfaces();
-  CFDictionaryRef myDict = CNCopyCurrentNetworkInfo(CFArrayGetValueAtIndex(myArray, 0));
-  //  long count = CFDictionaryGetCount(myDict);
-  //  NSLog(@"supported interfaces count = %ld",count);
-  NSString *ssid = CFDictionaryGetValue(myDict, kCNNetworkInfoKeySSID);
-  //  NSLog(@"connected SSID is %@",ssid);
-  return ssid;
-}
-
-- (void) addReaderAP:(NSString *) ap password:(NSString *) password {
-  if (haveCommandInvoke)
-  {
-    // +--ID--+-Arg Len-+-Arg Data-------------------------------------------+
-    // | 0x21 | 097     | home | ssid | auth | pwd                           |
-    // +------+---------+----------------------------------------------------+
-    // | 1 B  | 3 C     | 1 B  | 32 B | 1 B  | 63 B                          |
-    // +------+---------+----------------------------------------------------+
-    //
-    // home is not true (i.e, not set to 1)
-    // Arg Len is encoded as decimal ascii
-    //
-    unsigned char addAccessPointCommand[5] = {0x21, 0x30, 0x36, 0x31, 0xFF};
-    NSMutableData *AAPCmd = [NSMutableData dataWithBytes:addAccessPointCommand length:sizeof(addAccessPointCommand)];
-    // since the ap string was selected using APs detected by the device, they cannot be too long (> 32 chars)
-    unsigned long padding = 32 - [ap length];
-    NSLog(@"padding is %lu blanks",padding);
-    if (padding > 0) {
-      NSString *temp = [[NSString string] stringByPaddingToLength:padding withString:@" " startingAtIndex:0];
-      ap = [ap stringByAppendingString:temp];
-    }
-    NSData *apData = [ap dataUsingEncoding:NSUTF8StringEncoding];
-    //    apData = [apData subdataWithRange:NSMakeRange(0, [apData length] - 1)];
-    [AAPCmd appendData:apData];
-    NSLog(@"AAPCmd length is %lu",(unsigned long)[AAPCmd length]);
-    
-    uint8_t auth[1] = {ENVISAS_ACCESS_POINT_SECURITY_WPA2_MIXED_PSK};
-    [AAPCmd appendBytes:auth length:1];
-    NSLog(@"AAPCmd length is %lu",(unsigned long)[AAPCmd length]);
-    
-    padding = 63 - [password length];
-    NSLog(@"padding is %lu blanks",padding);
-    if (padding > 0) {
-      NSString *temp = [[NSString string] stringByPaddingToLength:padding withString:@" " startingAtIndex:0];
-      password = [password stringByAppendingString:temp];
-    }
-    [AAPCmd appendData:[password dataUsingEncoding:NSUTF8StringEncoding]];
-    NSLog(@"AAPCmd length is %lu",(unsigned long)[AAPCmd length]);
-    uint8_t *dataBytes = (uint8_t *)[AAPCmd bytes];
-    for (int i = 0; i < [AAPCmd length]; i++)
-      printf("%02x\n",dataBytes[i]);
-    CBUUID *uuid = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
-    [self.ble write:AAPCmd toUUID:uuid];
+*/
+ #pragma mark - Navigation
+ 
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+  if ([[segue identifier] isEqualToString:@"accessPointsSegue"]) {
+    NSLog(@"[ConfigurationController] accessPointsSegue ");
+    // Get the new view controller using [segue destinationViewController].
+    AccessPointsController *apc = [segue destinationViewController];
+    [apc setPeripheral:self.peripheral];
   }
 }
 
-/*
- #pragma mark - Navigation
- 
- // In a storyboard-based application, you will often want to do a little preparation before navigation
- - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
- // Get the new view controller using [segue destinationViewController].
- // Pass the selected object to the new view controller.
- }
- */
 
 #pragma mark - BLE delegate
 
@@ -383,20 +297,18 @@
       printf("  has indicate encryption required\n");
     if (c.properties & CBCharacteristicPropertyAuthenticatedSignedWrites)
       printf("  has authenticated signed writes\n");
-
+    
     // Ignore the spare for now...
     if ([c.UUID.UUIDString isEqual:commandSpareCharacteristicUUID.UUIDString]) {}
-
+    
     if ([c.UUID.UUIDString isEqual:commandInvokeCharacteristicUUID.UUIDString]) {
       haveCommandInvoke = true;
       [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
-
-      EnvisasCommand * listAPsCommand = [[EnvisasCommand alloc] initWith:LIST_ACCESS_POINTS argument:NULL error:NULL];
-      NSArray<NSString *> *commandStrings = [listAPsCommand commandStrings];
-//      EnvisasCommand * readerStatusCommand = [[EnvisasCommand alloc] initWith:READER_STATUS argument:NULL error:NULL];
-//      NSArray<NSString *> *commandStrings = [readerStatusCommand commandStrings];
       
-
+      EnvisasCommand * readerStatusCommand = [[EnvisasCommand alloc] initWith:READER_STATUS argument:NULL error:NULL];
+      NSArray<NSString *> *commandStrings = [readerStatusCommand commandStrings];
+      
+      
       for (int i = 0; i < [commandStrings count]; i++) {
         NSString *cmdStr = [commandStrings objectAtIndex:i];
         NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
@@ -527,25 +439,35 @@
       NSString *name = [respDict valueForKey:@"name"];
       NSLog(@"name = %@",name);
       
-      // check for access points list
-      if ([name compare:@"access_points"] == 0) {
-        // the access points are in a JSON array
+      if ([name compare:@"reader_status"] == 0) {
+        // inventory messages are either JSON arrays or strings
         NSObject *value = [respDict valueForKey:@"data"];
         if (value != nil && value != [NSNull null]) {
-          if ([value isKindOfClass:[NSArray class]])
-          {
-            NSArray *data = (NSArray *) value;
-            [accessPoints removeAllObjects];
-            NSLog(@"data contains :");
-            for (int i=0; i < [data count]; i++)
-            {
-              [accessPoints addObject:[data objectAtIndex:i]];
-              NSLog(@"  %@",[data objectAtIndex:i]);
+          
+          if ([value isKindOfClass:[NSDictionary class]]) {
+            NSLog(@"status is NSDictionary");
+//            NSString *dataStr = [respDict valueForKey:@"data"];
+            NSDictionary *dataDict = [respDict valueForKey:@"data"];
+            if ([NSJSONSerialization isValidJSONObject:respDict]) {
+              NSLog(@"data is a dictionary");
+              NSString *temp = [dataDict valueForKey:@"uptime"];
+              uptime = [temp integerValue];
+              temp = [dataDict valueForKey:@"externalpower"];
+              if ([temp caseInsensitiveCompare:@"yes"] == NSOrderedSame)
+                externalPower = true;
+              else
+                externalPower = false;
+              temp = [dataDict valueForKey:@"lastsession"];
+              lastSession = [temp integerValue];
+              temp = [dataDict valueForKey:@"batterylevel"];
+              batteryLevel = [temp integerValue];
+              temp = [dataDict valueForKey:@"timeuntilcharge"];
+              timeUntilCharge = [temp integerValue];
+              [self.tableView reloadData];
             }
-            [self.tableView reloadData];
-          } // if array
+          }
         }
-      } // name is "access_points"
+      } // name is "reader_status"
       
     }
   }

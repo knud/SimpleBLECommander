@@ -10,9 +10,10 @@
 		7A48938C200730D500DBF741 /* BLEUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A48938B200730D500DBF741 /* BLEUtils.m */; };
 		7A4893902007C5AC00DBF741 /* EnvisasReader.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A48938F2007C5AC00DBF741 /* EnvisasReader.m */; };
 		7A4893942007DD2800DBF741 /* EnvisasCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A4893932007DD2800DBF741 /* EnvisasCommand.m */; };
-		7A52D3BD1FFD94A700479683 /* AccessPointsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A52D3BC1FFD94A700479683 /* AccessPointsController.m */; };
+		7A52D3BD1FFD94A700479683 /* ConfigurationController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A52D3BC1FFD94A700479683 /* ConfigurationController.m */; };
 		7A5CA5F5200445D9006DB940 /* PickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A5CA5F4200445D9006DB940 /* PickerView.m */; };
 		7A6E71CD201554A800E11EE2 /* BagContentsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A6E71CC201554A800E11EE2 /* BagContentsController.m */; };
+		7A85785F204FB55E00E8575D /* AccessPointsController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A85785E204FB55E00E8575D /* AccessPointsController.m */; };
 		7AC4BC7E1FFA5C9C00AE7C8E /* BagController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AC4BC7D1FFA5C9C00AE7C8E /* BagController.m */; };
 		7AC4BC811FFAC9D700AE7C8E /* BagTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AC4BC801FFAC9D700AE7C8E /* BagTableViewCell.m */; };
 		7AD760AA1FF6D07A00AB0541 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AD760A91FF6D07A00AB0541 /* AppDelegate.m */; };
@@ -33,13 +34,15 @@
 		7A4893912007C5D000DBF741 /* EnvisasReader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnvisasReader.h; sourceTree = "<group>"; };
 		7A4893922007DD1000DBF741 /* EnvisasCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnvisasCommand.h; sourceTree = "<group>"; };
 		7A4893932007DD2800DBF741 /* EnvisasCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EnvisasCommand.m; sourceTree = "<group>"; };
-		7A52D3BB1FFD94A700479683 /* AccessPointsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AccessPointsController.h; sourceTree = "<group>"; };
-		7A52D3BC1FFD94A700479683 /* AccessPointsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AccessPointsController.m; sourceTree = "<group>"; };
+		7A52D3BB1FFD94A700479683 /* ConfigurationController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ConfigurationController.h; sourceTree = "<group>"; };
+		7A52D3BC1FFD94A700479683 /* ConfigurationController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ConfigurationController.m; sourceTree = "<group>"; };
 		7A5CA5F3200445D9006DB940 /* PickerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PickerView.h; sourceTree = "<group>"; };
 		7A5CA5F4200445D9006DB940 /* PickerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PickerView.m; sourceTree = "<group>"; };
 		7A5CA5F720044696006DB940 /* EnvisasAccessPointSecurity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EnvisasAccessPointSecurity.h; sourceTree = "<group>"; };
 		7A6E71CB201554A800E11EE2 /* BagContentsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BagContentsController.h; sourceTree = "<group>"; };
 		7A6E71CC201554A800E11EE2 /* BagContentsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BagContentsController.m; sourceTree = "<group>"; };
+		7A85785D204FB53E00E8575D /* AccessPointsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AccessPointsController.h; sourceTree = "<group>"; };
+		7A85785E204FB55E00E8575D /* AccessPointsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AccessPointsController.m; sourceTree = "<group>"; };
 		7AC4BC7C1FFA5C9C00AE7C8E /* BagController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BagController.h; sourceTree = "<group>"; };
 		7AC4BC7D1FFA5C9C00AE7C8E /* BagController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BagController.m; sourceTree = "<group>"; };
 		7AC4BC7F1FFAC9D700AE7C8E /* BagTableViewCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BagTableViewCell.h; sourceTree = "<group>"; };
@@ -128,10 +131,12 @@
 				7AD760AF1FF6D07A00AB0541 /* SecondViewController.m */,
 				7AD760C51FF6D12900AB0541 /* RB_BLE */,
 				7AD760B11FF6D07A00AB0541 /* Main.storyboard */,
+				7A85785D204FB53E00E8575D /* AccessPointsController.h */,
+				7A85785E204FB55E00E8575D /* AccessPointsController.m */,
 				7A6E71CB201554A800E11EE2 /* BagContentsController.h */,
 				7A6E71CC201554A800E11EE2 /* BagContentsController.m */,
-				7A52D3BB1FFD94A700479683 /* AccessPointsController.h */,
-				7A52D3BC1FFD94A700479683 /* AccessPointsController.m */,
+				7A52D3BB1FFD94A700479683 /* ConfigurationController.h */,
+				7A52D3BC1FFD94A700479683 /* ConfigurationController.m */,
 				7AC4BC7C1FFA5C9C00AE7C8E /* BagController.h */,
 				7AC4BC7D1FFA5C9C00AE7C8E /* BagController.m */,
 				7AC4BC7F1FFAC9D700AE7C8E /* BagTableViewCell.h */,
@@ -234,6 +239,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A85785F204FB55E00E8575D /* AccessPointsController.m in Sources */,
 				7A4893942007DD2800DBF741 /* EnvisasCommand.m in Sources */,
 				7A5CA5F5200445D9006DB940 /* PickerView.m in Sources */,
 				7A6E71CD201554A800E11EE2 /* BagContentsController.m in Sources */,
@@ -243,7 +249,7 @@
 				7AD760BB1FF6D07A00AB0541 /* main.m in Sources */,
 				7A48938C200730D500DBF741 /* BLEUtils.m in Sources */,
 				7AD760C41FF6D11F00AB0541 /* BLE.m in Sources */,
-				7A52D3BD1FFD94A700479683 /* AccessPointsController.m in Sources */,
+				7A52D3BD1FFD94A700479683 /* ConfigurationController.m in Sources */,
 				7A4893902007C5AC00DBF741 /* EnvisasReader.m in Sources */,
 				7AC4BC811FFAC9D700AE7C8E /* BagTableViewCell.m in Sources */,
 			);

@@ -1,5 +1,5 @@
 //
-//  AccessPointsController.h
+//  AccessPointsTableViewController.h
 //  Odin BLE Tester
 //
 //  Created by Knud S Knudsen on 2018-01-03.
@@ -9,7 +9,7 @@
 #import <UIKit/UIKit.h>
 #import "BLE.h"
 
-@interface AccessPointsController : UITableViewController <BLEDelegate>
+@interface ConfigurationController : UITableViewController <BLEDelegate>
 
 @property (weak, nonatomic) BLE *ble;
 @property (weak, nonatomic) CBPeripheral *peripheral;

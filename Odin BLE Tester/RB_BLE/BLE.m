@@ -474,6 +474,7 @@ static int rssi = 0;
 
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error
 {
+  NSLog(@"didUpdateValueForCharacteristic");
   if (error) {
     NSLog(@"Error code was %s", [[error description] cStringUsingEncoding:NSStringEncodingConversionAllowLossy]);
     NSLog(@"Retrieving value for characteristic unsuccessful!");

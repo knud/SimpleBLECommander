@@ -6,19 +6,21 @@
 //  Copyright © 2018 Envisas Inc. All rights reserved.
 //
 
-#import "AccessPointsController.h"
+#import "ConfigurationController.h"
 #import "BagContentsController.h"
 #import "BLEDefines.h"
 #import "EnvisasCommand.h"
 
 @interface BagContentsController ()
 {
-  UIActivityIndicatorView *bagScanningIndicator;
+  UIRefreshControl *scanContentsControl;
   NSMutableArray<NSString *> *tags;
   NSMutableData *bleReceiverBuffer;
   int bleDataCount;
   bool recStartFound;
   bool recEndFound;
+  bool seguedToConfiguration;
+  
 }
 @end
 
@@ -36,7 +38,10 @@
   
   // safe to initialize as nothing could have possibly been received yet
   recStartFound = false;
-  recEndFound = false;;
+  recEndFound = false;
+  
+  // use this to keep from disconnecting the peripheral
+  seguedToConfiguration = false;
   
   ble = [BLE sharedInstance];
   ble.delegate = self;
@@ -45,12 +50,10 @@
   bleDataCount = 0;
   tags = [[NSMutableArray<NSString *> alloc] init];
   
-  bagScanningIndicator = [[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
-  bagScanningIndicator.frame = CGRectMake(0.0, 0.0, 180.0, 180.0);
-  bagScanningIndicator.center = self.view.center;
-  [self.view addSubview:bagScanningIndicator];
-  [bagScanningIndicator bringSubviewToFront:self.view];
-  
+  scanContentsControl = [[UIRefreshControl alloc] init];
+  [self.tableView addSubview:scanContentsControl];
+  [scanContentsControl addTarget:self action:@selector(scanContents) forControlEvents:UIControlEventValueChanged];
+
   [UIApplication sharedApplication].networkActivityIndicatorVisible = TRUE;
   if (self.peripheral)
     [ble connectPeripheral:self.peripheral];
@@ -65,7 +68,7 @@
 {
   if (ble.activePeripheral)
   {
-    if(ble.activePeripheral.state == CBPeripheralStateConnected)
+    if(ble.activePeripheral.state == CBPeripheralStateConnected && !seguedToConfiguration)
     {
       NSLog(@"Disconnecting peripheral...");
       [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
@@ -84,18 +87,18 @@
   return 1;
 }
 
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
+{
+  return @"Drag to refresh";
+}
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
   return [tags count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   
-  NSString *cellIdentifier;
-  
-  if (indexPath.row == 0)
-    cellIdentifier = @"StatusCell";
-  else
-    cellIdentifier = @"BagContentsCell";
+  NSString *cellIdentifier = @"BagContentsCell";
 
   UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier forIndexPath:indexPath];
   
@@ -105,32 +108,35 @@
             reuseIdentifier:cellIdentifier];
   }
 
-  if (indexPath.row == 0) {
-    
-  } else {
-    NSString *tagName = [tags objectAtIndex:indexPath.row];
-    
-    [cell.textLabel setText:tagName];
-    [cell.detailTextLabel setText:@"could put something here..."];
-  }
+  NSString *tagName = [tags objectAtIndex:indexPath.row];
+  [cell.textLabel setText:tagName];
+  [cell.detailTextLabel setText:@"could put something here..."];
 
   return cell;
+}
+
+#pragma mark - UI Action
+
+- (void)scanContents {
+  [tags removeAllObjects];
+  [self.tableView reloadData];
+  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
+  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
+  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
 }
 
 #pragma mark - Navigation
 
 // In a storyboard-based application, you will often want to do a little preparation before navigation
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-  if ([[segue identifier] isEqualToString:@"accessPointsSegue"]) {
-    NSLog(@"[BagContentsController] accessPointsSegue ");
+  if ([[segue identifier] isEqualToString:@"configurationSegue"]) {
+    NSLog(@"[BagContentsController] configurationSegue ");
     // Get the new view controller using [segue destinationViewController].
-    AccessPointsController *apc = [segue destinationViewController];
-    
-    [apc setPeripheral:self.peripheral];
+    ConfigurationController *cc = [segue destinationViewController];
+    seguedToConfiguration = true;
+    [cc setPeripheral:self.peripheral];
   }
 }
-
-
 
 #pragma mark - UI actions
 
@@ -156,9 +162,9 @@
 {
   NSLog(@"->Connected");
   
-  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
-  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
-  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
+//  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
+//  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
+//  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
   
 }
 
@@ -237,16 +243,15 @@
       [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
       
       // We need a list of tags, so issue an inventory command
+      // TODO replace hard-coded seconds above and below with proper programmtic value
       EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
       NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
       
-//      EnvisasCommand * readerStatusCommand = [[EnvisasCommand alloc] initWith:READER_STATUS argument:NULL error:NULL];
-//      NSArray<NSString *> *commandStrings = [readerStatusCommand commandStrings];
-
-      [bagScanningIndicator startAnimating];
       [self.navigationItem.backBarButtonItem setEnabled:NO];
-      // TODO replace 11 and 10 above with proper programmtic value
-      [NSTimer scheduledTimerWithTimeInterval:(float)11.0 target:self selector:@selector(bagScanningTimer:) userInfo:nil repeats:NO];
+      
+      // Provide mechanism failure to return data
+      // TODO replace hard-coded seconds above and below with proper programmtic value
+      [NSTimer scheduledTimerWithTimeInterval:(float)12.0 target:self selector:@selector(bagScanningTimer:) userInfo:nil repeats:NO];
 
       
       // TODO could move this into a method to handle command strings?
@@ -269,8 +274,8 @@
 
 -(void) bagScanningTimer:(NSTimer *)timer
 {
+  [scanContentsControl endRefreshing];
   // reset the right bar button
-  [bagScanningIndicator stopAnimating];
   [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
 }
 
@@ -303,7 +308,7 @@
         } else {
           NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
           [self parseResponse:bleReceiverBuffer];
-          [bagScanningIndicator stopAnimating];
+          [scanContentsControl endRefreshing];
           [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
         }
       }
@@ -323,21 +328,37 @@
   
   NSString *temp = [[NSString alloc] initWithData:bleReceiverBuffer encoding:NSUTF8StringEncoding];
   NSLog(@" temp string = %@",temp);
-  // TODO parse the data!
+  // Each message returned by the reader, command response, command end, and command result,
+  // has as it's last KV pair the coreid. The "data" part of the message may contain a JSON
+  // string, so we have to ignore it, which is done by skipping to the coreid KV
   NSString *startStr = @"{\"name";
+  NSString *lastKVStr = @"coreid";
   NSString *endStr = @"\"}";
   NSRange currentRange = {0, [temp length]};
   for (int jsonMsgs = 0; jsonMsgs < 3; jsonMsgs++) {
+    // find the start of the JSON message
     NSRange startRange = [temp rangeOfString:startStr options:NSLiteralSearch range:currentRange];
-    NSLog(@"range %lu %lu",(unsigned long)startRange.location,(unsigned long)startRange.length);
+    NSLog(@"name range %lu %lu",(unsigned long)startRange.location,(unsigned long)startRange.length);
     if (startRange.length <= 0) {
       NSLog(@"Parse error; no starting {\"name");
       return;
     }
     currentRange.location = startRange.location + startRange.length;
     currentRange.length = [temp length] - currentRange.location;
+
+    // find the "coreid" key
+    NSRange coreidRange = [temp rangeOfString:lastKVStr options:NSLiteralSearch range:currentRange];
+    NSLog(@"core id range %lu %lu",(unsigned long)coreidRange.location,(unsigned long)coreidRange.length);
+    if (coreidRange.length <= 0) {
+      NSLog(@"Parse error; no closing coreid key");
+      return;
+    }
+    currentRange.location = coreidRange.location + coreidRange.length;
+    currentRange.length = [temp length] - currentRange.location;
+
+    // finally, find the end of the JSON message
     NSRange endRange = [temp rangeOfString:endStr options:NSLiteralSearch range:currentRange];
-    NSLog(@"range %lu %lu",(unsigned long)endRange.location,(unsigned long)endRange.length);
+    NSLog(@"end range %lu %lu",(unsigned long)endRange.location,(unsigned long)endRange.length);
     if (endRange.length <= 0) {
       NSLog(@"Parse error; no closing }");
       return;
@@ -358,7 +379,7 @@
   NSDictionary *respDict = [NSJSONSerialization JSONObjectWithData:commandResponse options:kNilOptions error:&error];
   if (error)
   {
-    NSLog(@"LAP response is not JSON");
+    NSLog(@"response is not JSON");
     if ([error code] == NSPropertyListReadCorruptError)
       NSLog(@"Error code is NSPropertyListReadCorruptError");
   }
@@ -399,18 +420,7 @@
           } // if array
         }
       } // name is "inventory"
-      else {
-        // check for command_result
-        if ([name compare:@"command_result"] == 0) {
-          NSString *result = [respDict valueForKey:@"data"];
-          if (result) {
-            NSLog(@"command_result = %@",result);
-          } else {
-            NSLog(@"Bad command_result");
-          }
-        }
-      } // name is not "inventory"
-      
+            
     }
   }
 }
