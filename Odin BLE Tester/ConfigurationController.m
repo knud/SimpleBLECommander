@@ -24,7 +24,7 @@
   bool haveCommandResponse;
   NSUInteger uptime;
   bool externalPower;
-  NSUInteger lastSession;
+  NSUInteger secondssincelastscan;
   NSUInteger batteryLevel;
   NSUInteger timeUntilCharge;
 }
@@ -47,7 +47,7 @@
 
   uptime = 0;
   externalPower = false;
-  lastSession = 0;
+  secondssincelastscan = 0;
   batteryLevel = 0;
   timeUntilCharge = 0;
 
@@ -122,13 +122,17 @@
     // status section
 //    uptime = 0;
 //    externalPower = false;
-//    lastSession = 0;
+//    secondssincelastscan = 0;
 //    batteryLevel = 0;
 //    timeUntilCharge = 0;
     UILabel *label = (UILabel *)[cell viewWithTag:1];
     if (indexPath.row == 0) {
-      if (externalPower)
-        cell.imageView.image = [UIImage imageNamed:@"battery_charge.png"];
+      if (externalPower) {
+        if (batteryLevel >= 100)
+          cell.imageView.image = [UIImage imageNamed:@"battery_full.png"];
+        else
+          cell.imageView.image = [UIImage imageNamed:@"battery_charge.png"];
+      }
       else {
         if (batteryLevel > 95)
           cell.imageView.image = [UIImage imageNamed:@"battery_full.png"];
@@ -151,7 +155,10 @@
     }
     if (indexPath.row == 2) {
       cell.imageView.image = [UIImage imageNamed:@"310-alarm-clock.png"];
-      label.text = @"Last session : 2 hours ago";
+      if (secondssincelastscan >= 999999999)
+        label.text = [NSString stringWithFormat:@"Last session : unknown"];
+      else
+        label.text = [NSString stringWithFormat:@"Last session : %lu seconds ago",(unsigned long) secondssincelastscan];
     }
   }
   else {
@@ -457,8 +464,8 @@
                 externalPower = true;
               else
                 externalPower = false;
-              temp = [dataDict valueForKey:@"lastsession"];
-              lastSession = [temp integerValue];
+              temp = [dataDict valueForKey:@"secondssincelastscan"];
+              secondssincelastscan = [temp integerValue];
               temp = [dataDict valueForKey:@"batterylevel"];
               batteryLevel = [temp integerValue];
               temp = [dataDict valueForKey:@"timeuntilcharge"];
