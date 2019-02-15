@@ -213,7 +213,8 @@
       NSString *deviceName = [ad valueForKey:CBAdvertisementDataLocalNameKey];
       if (deviceName)
       {
-        if ([deviceName compare:@BLE_DEVICE_NAME] == NSOrderedSame) {
+        if (([deviceName compare:@BLE_DEVICE_NAME1] == NSOrderedSame) ||
+            ([deviceName compare:@BLE_DEVICE_NAME2] == NSOrderedSame) ) {
           NSLog(@"Got peripheral %@",deviceName);
           self.peripheral = p;
           [self.bags addObject:p];
