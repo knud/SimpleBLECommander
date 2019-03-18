@@ -262,8 +262,9 @@ static int rssi = 0;
 -(void) enableReadNotification:(CBPeripheral *)p
 {
   CBUUID *uuid_service = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
-  CBUUID *uuid_char = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
-  
+  CBUUID *uuid_char = [CBUUID UUIDWithString:@ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID];
+//  CBUUID *uuid_char = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
+
   [self notification:uuid_service characteristicUUID:uuid_char p:p on:YES];
 }
 
@@ -491,9 +492,9 @@ static int rssi = 0;
     // We use this characteristic to exchange messages with the peripheral, so pass the update
     // along to the delegate
     if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:@ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID]]) {
-//      NSLog(@"didUpdateValueForCharacteristic for %@",@ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID);
+      NSLog(@"didUpdateValueForCharacteristic for %@",@ENVISAS_COMMAND_RESPONSE_CHARACTERISTIC_UUID);
       if (characteristic.value) {
-//        NSLog(@"read value got %lu data",[characteristic.value length]);
+        NSLog(@"read value got %lu data",[characteristic.value length]);
         [[self delegate] bleHaveDataFor:characteristic];
       } else {
         NSLog(@"read value returned null characteristic.value");

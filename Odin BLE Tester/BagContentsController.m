@@ -17,6 +17,7 @@
   NSMutableArray<NSString *> *tags;
   NSMutableData *bleReceiverBuffer;
   int bleDataCount;
+  bool dataAvailable;
   bool recStartFound;
   bool recEndFound;
   bool seguedToConfiguration;
@@ -48,12 +49,13 @@
   
   bleReceiverBuffer=[[NSMutableData alloc] init];
   bleDataCount = 0;
+  dataAvailable = false;
   tags = [[NSMutableArray<NSString *> alloc] init];
   
   scanContentsControl = [[UIRefreshControl alloc] init];
   [self.tableView addSubview:scanContentsControl];
   [scanContentsControl addTarget:self action:@selector(scanContents) forControlEvents:UIControlEventValueChanged];
-
+  
   [UIApplication sharedApplication].networkActivityIndicatorVisible = TRUE;
   if (self.peripheral)
     [ble connectPeripheral:self.peripheral];
@@ -99,7 +101,7 @@
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   
   NSString *cellIdentifier = @"BagContentsCell";
-
+  
   UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier forIndexPath:indexPath];
   
   if (cell == nil) {
@@ -107,11 +109,11 @@
             initWithStyle:UITableViewCellStyleDefault
             reuseIdentifier:cellIdentifier];
   }
-
+  
   NSString *tagName = [tags objectAtIndex:indexPath.row];
   [cell.textLabel setText:tagName];
   [cell.detailTextLabel setText:@"could put something here..."];
-
+  
   return cell;
 }
 
@@ -120,9 +122,34 @@
 - (void)scanContents {
   [tags removeAllObjects];
   [self.tableView reloadData];
-  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
-  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
-  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
+  //  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
+  //  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
+  //  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
+  //      // enable notification for this characteristic on the peripheral
+  //      [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
+  
+  // We need a list of tags, so issue an inventory command
+  // TODO replace hard-coded seconds above and below with proper programmtic value
+  EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
+  NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
+  
+  [self.navigationItem.backBarButtonItem setEnabled:NO];
+  //
+  // Provide mechanism failure to return data
+  // TODO replace hard-coded seconds above and below with proper programmtic value
+  [NSTimer scheduledTimerWithTimeInterval:(float)12.0 target:self selector:@selector(bagScanningTimer:) userInfo:nil repeats:NO];
+  
+  
+  // TODO could move this into a method to handle command strings?
+  CBUUID *uuid = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
+  for (int i = 0; i < [commandStrings count]; i++) {
+    NSString *cmdStr = [commandStrings objectAtIndex:i];
+    NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
+    NSLog(@"cmdStr = %@",cmdStr);
+    [self.ble write:cmdData toUUID:uuid];
+    /*[NSThread sleepForTimeInterval:0.05];*/
+  }
+  
 }
 
 #pragma mark - Navigation
@@ -162,10 +189,9 @@
 {
   NSLog(@"->Connected");
   
-//  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
-//  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
-//  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
-  
+  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@ENVISAS_COMMAND_SERVICE_UUID];
+  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
+  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
 }
 
 - (void)bleDidDisconnect
@@ -237,37 +263,42 @@
     // Ignore the spare for now...
     if ([c.UUID.UUIDString isEqual:commandSpareCharacteristicUUID.UUIDString]) {}
     
-    if ([c.UUID.UUIDString isEqual:commandInvokeCharacteristicUUID.UUIDString])
+    if ([c.UUID.UUIDString isEqual:commandResponseCharacteristicUUID.UUIDString])
     {
+      NSLog(@"Response characterisitc");
       // enable notification for this characteristic on the peripheral
       [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
+    }
+    
+    // TODO should probably check that notifying worked before sending commands
+    if ([c.UUID.UUIDString isEqual:commandInvokeCharacteristicUUID.UUIDString])
+    {
+      NSLog(@"Invoke characterisitc");
+      
+      //      // enable notification for this characteristic on the peripheral
+      //      [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
       
       // We need a list of tags, so issue an inventory command
       // TODO replace hard-coded seconds above and below with proper programmtic value
-      EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
-      NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
-      
-      [self.navigationItem.backBarButtonItem setEnabled:NO];
-      
+      //      EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
+      //      NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
+      //
+      //      [self.navigationItem.backBarButtonItem setEnabled:NO];
+      //
       // Provide mechanism failure to return data
       // TODO replace hard-coded seconds above and below with proper programmtic value
-      [NSTimer scheduledTimerWithTimeInterval:(float)12.0 target:self selector:@selector(bagScanningTimer:) userInfo:nil repeats:NO];
-
+      //      [NSTimer scheduledTimerWithTimeInterval:(float)12.0 target:self selector:@selector(bagScanningTimer:) userInfo:nil repeats:NO];
+      //
       
       // TODO could move this into a method to handle command strings?
-      CBUUID *uuid = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
-      for (int i = 0; i < [commandStrings count]; i++) {
-        NSString *cmdStr = [commandStrings objectAtIndex:i];
-        NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
-        NSLog(@"cmdStr = %@",cmdStr);
-        [self.ble write:cmdData toUUID:uuid];
-//        [NSThread sleepForTimeInterval:0.05];
-      }
-    }
-    if ([c.UUID.UUIDString isEqual:commandResponseCharacteristicUUID.UUIDString])
-    {
-      // enable notification for this characteristic on the peripheral
-      [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
+      //      CBUUID *uuid = [CBUUID UUIDWithString:@ENVISAS_COMMAND_INVOKE_CHARACTERISTIC_UUID];
+      //      for (int i = 0; i < [commandStrings count]; i++) {
+      //        NSString *cmdStr = [commandStrings objectAtIndex:i];
+      //        NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
+      //        NSLog(@"cmdStr = %@",cmdStr);
+      //        [self.ble write:cmdData toUUID:uuid];
+      //        /*[NSThread sleepForTimeInterval:0.05];*/
+      //      }
     }
   }
 }
@@ -285,33 +316,64 @@
   if (characteristic.value) {
     if ([characteristic.value length] > 0)
     {
-      if (bleDataCount <= 0) {
-        NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
-        //        NSLog(@"bleHaveDataFor received %@",cv);
-        NSRange prefixRange = [cv rangeOfString:@"dataAvailable" options:(NSAnchoredSearch | NSCaseInsensitiveSearch)];
-        if (prefixRange.length > 0) {
-          // new data is available
-          NSString *countStr = [cv substringFromIndex:(prefixRange.length+1)];
-          NSLog(@"countStr %@",countStr);
-          [bleReceiverBuffer setLength:0];
-          bleDataCount = [countStr intValue];
-          // ask for some data
-          [self.ble.activePeripheral readValueForCharacteristic:characteristic];
-        }
+      if (!dataAvailable) {
+                NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
+                NSLog(@"bleHaveDataFor received %@",cv);
+                NSRange prefixRange = [cv rangeOfString:@"dataAvailable" options:(NSAnchoredSearch | NSCaseInsensitiveSearch)];
+                if (prefixRange.length > 0) {
+                  // new data is available
+                  NSString *countStr = [cv substringFromIndex:(prefixRange.length+1)];
+                  NSLog(@"countStr %@",countStr);
+                  [bleReceiverBuffer setLength:0];
+                  bleDataCount = [countStr intValue];
+                  // ask for some data
+//                  [self.ble.activePeripheral readValueForCharacteristic:characteristic];
+                }
+        dataAvailable = true;
+//        [self.ble.activePeripheral readValueForCharacteristic:characteristic];
       } else {
+        NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
+        NSLog(@"bleHaveDataFor received %ld bytes",[characteristic.value length]);
+        NSLog(@"bleHaveDataFor received %@",cv);
+//        [bleReceiverBuffer setLength:0];
         [bleReceiverBuffer appendData:characteristic.value];
+        NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
         bleDataCount -= [characteristic.value length];
-        
-        if (bleDataCount > 0) {
-          // ask for more data
-          [self.ble.activePeripheral readValueForCharacteristic:characteristic];
-        } else {
-          NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
-          [self parseResponse:bleReceiverBuffer];
-          [scanContentsControl endRefreshing];
-          [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
+        if (bleDataCount <= 0) {
+          NSLog(@"got all data");
+        [self parseResponse:bleReceiverBuffer];
+        [scanContentsControl endRefreshing];
+        [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
+        dataAvailable = false;
         }
       }
+      //      if (bleDataCount <= 0) {
+      //        NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
+      //        NSLog(@"bleHaveDataFor received %@",cv);
+      //        NSRange prefixRange = [cv rangeOfString:@"dataAvailable" options:(NSAnchoredSearch | NSCaseInsensitiveSearch)];
+      //        if (prefixRange.length > 0) {
+      //          // new data is available
+      //          NSString *countStr = [cv substringFromIndex:(prefixRange.length+1)];
+      //          NSLog(@"countStr %@",countStr);
+      //          [bleReceiverBuffer setLength:0];
+      //          bleDataCount = [countStr intValue];
+      //          // ask for some data
+      //          [self.ble.activePeripheral readValueForCharacteristic:characteristic];
+      //        }
+      //      } else {
+      //        [bleReceiverBuffer appendData:characteristic.value];
+      //        bleDataCount -= [characteristic.value length];
+      //
+      //        if (bleDataCount > 0) {
+      //          // ask for more data
+      //          [self.ble.activePeripheral readValueForCharacteristic:characteristic];
+      //        } else {
+      //          NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
+      //          [self parseResponse:bleReceiverBuffer];
+      //          [scanContentsControl endRefreshing];
+      //          [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
+      //        }
+      //      }
     }
   }
 }
@@ -335,7 +397,7 @@
   NSString *lastKVStr = @"coreid";
   NSString *endStr = @"\"}";
   NSRange currentRange = {0, [temp length]};
-  for (int jsonMsgs = 0; jsonMsgs < 3; jsonMsgs++) {
+  for (int jsonMsgs = 0; jsonMsgs < 1; jsonMsgs++) {
     // find the start of the JSON message
     NSRange startRange = [temp rangeOfString:startStr options:NSLiteralSearch range:currentRange];
     NSLog(@"name range %lu %lu",(unsigned long)startRange.location,(unsigned long)startRange.length);
@@ -345,7 +407,7 @@
     }
     currentRange.location = startRange.location + startRange.length;
     currentRange.length = [temp length] - currentRange.location;
-
+    
     // find the "coreid" key
     NSRange coreidRange = [temp rangeOfString:lastKVStr options:NSLiteralSearch range:currentRange];
     NSLog(@"core id range %lu %lu",(unsigned long)coreidRange.location,(unsigned long)coreidRange.length);
@@ -355,7 +417,7 @@
     }
     currentRange.location = coreidRange.location + coreidRange.length;
     currentRange.length = [temp length] - currentRange.location;
-
+    
     // finally, find the end of the JSON message
     NSRange endRange = [temp rangeOfString:endStr options:NSLiteralSearch range:currentRange];
     NSLog(@"end range %lu %lu",(unsigned long)endRange.location,(unsigned long)endRange.length);
@@ -368,6 +430,7 @@
     // grab the data
     NSRange subDataRange = {startRange.location, endRange.location + endRange.length - startRange.location};
     NSData *tempData = [response subdataWithRange:subDataRange];
+    NSLog(@"subDataRange = %ld len %ld",subDataRange.location, subDataRange.length);
     if (jsonMsgs == 0) commandResponse = [NSData dataWithData:tempData];
     if (jsonMsgs == 1) commandEnd = [NSData dataWithData:tempData];
     if (jsonMsgs == 2) commandResult = [NSData dataWithData:tempData];
@@ -400,27 +463,55 @@
           {
             NSString *invString = (NSString *) value;
             NSLog(@"invString = %@",invString);
-            if ([invString componentsSeparatedByString:@"end"] == 0)
+            NSData *dataData = [invString dataUsingEncoding:NSUTF8StringEncoding];
+            NSDictionary *dataDict = [NSJSONSerialization JSONObjectWithData:dataData options:kNilOptions error:&error];
+            if (error)
             {
-              NSLog(@"No more tags...");
-              return;
+              NSLog(@"data is not JSON");
+              if ([error code] == NSPropertyListReadCorruptError)
+                NSLog(@"Error code is NSPropertyListReadCorruptError");
             }
+            NSLog(@"data is JSON");
+            NSObject *tagsValue = [dataDict valueForKey:@"tags"];
+            if (tagsValue != nil && tagsValue != [NSNull null]) {
+              NSLog(@"check for tagsarray");
+              if ([tagsValue isKindOfClass:[NSArray class]])
+              {
+                NSLog(@"tags parses to tags array");
+                NSArray *data = (NSArray *) tagsValue;
+                [tags removeAllObjects];
+                NSLog(@"data contains %d tags:",[data count]);
+                for (int i=0; i < [data count]; i++)
+                {
+                  [tags addObject:[data objectAtIndex:i]];
+                  NSLog(@"  %@",[data objectAtIndex:i]);
+                }
+                [self.tableView reloadData];
+              }
+            }
+//            if ([invString componentsSeparatedByString:@"end"] == 0)
+//            {
+//              NSLog(@"No more tags...");
+//              return;
+//            }
           }
-          if ([value isKindOfClass:[NSArray class]])
-          {
-            NSArray *data = (NSArray *) value;
-            [tags removeAllObjects];
-            NSLog(@"data contains :");
-            for (int i=0; i < [data count]; i++)
-            {
-              [tags addObject:[data objectAtIndex:i]];
-              NSLog(@"  %@",[data objectAtIndex:i]);
-            }
-            [self.tableView reloadData];
-          } // if array
+//          NSLog(@"check for array");
+//          if ([value isKindOfClass:[NSArray class]])
+//          {
+//            NSLog(@"tags parses to array");
+//            NSArray *data = (NSArray *) value;
+//            [tags removeAllObjects];
+//            NSLog(@"data contains :");
+//            for (int i=0; i < [data count]; i++)
+//            {
+//              [tags addObject:[data objectAtIndex:i]];
+//              NSLog(@"  %@",[data objectAtIndex:i]);
+//            }
+//            [self.tableView reloadData];
+//          } // if array
         }
       } // name is "inventory"
-            
+      
     }
   }
 }
