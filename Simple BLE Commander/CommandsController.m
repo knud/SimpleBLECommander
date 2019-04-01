@@ -14,6 +14,7 @@
 
 #import "CommandsController.h"
 #import "CommandsTableViewCell.h"
+#import "CommandResultController.h"
 #import "BLEDefines.h"
 #import "SimpleCommand.h"
 
@@ -25,8 +26,10 @@
   bool dataAvailable;
   bool recStartFound;
   bool recEndFound;
+  // use this to keep from disconnecting the peripheral
   bool seguedToCommandResult;
-  
+
+  CommandsTableViewCell *currentCommandCell;
 }
 @end
 
@@ -46,8 +49,7 @@
   recStartFound = false;
   recEndFound = false;
   
-  // use this to keep from disconnecting the peripheral
-  seguedToCommandResult = false;
+  currentCommandCell = nil;
   
   ble = [BLE sharedInstance];
   ble.delegate = self;
@@ -74,6 +76,7 @@
 - (void) viewWillAppear:(BOOL)animated
 {
   ble.delegate = self;
+  seguedToCommandResult = false;
 }
 
 - (void) viewDidDisappear:(BOOL)animated
@@ -106,9 +109,8 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
   UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
-  CommandsTableViewCell *cc = (CommandsTableViewCell *) cell;
+  currentCommandCell = (CommandsTableViewCell *) cell;
   [self invokeCommand:indexPath.row];
-//  [self performSegueWithIdentifier:@"commandSegue" sender:cell];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -135,77 +137,33 @@
 
 // In a storyboard-based application, you will often want to do a little preparation before navigation
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-//  if ([[segue identifier] isEqualToString:@"commandsSegue"]) {
-//    // Get the new view controller using [segue destinationViewController].
-//    CommandsController *commandsController = [segue destinationViewController];
-//
-//    PeripheralsTableViewCell *cell = (PeripheralsTableViewCell *) sender;
-//
-//    [commandsController setPeripheral:cell.peripheral];
-//
-//    // Paranoia. Should never be connected.
-//    if (ble.activePeripheral)
-//      if(ble.activePeripheral.state == CBPeripheralStateConnected)
-//        [[ble CM] cancelPeripheralConnection:[ble activePeripheral]];
-//  }
+  if ([[segue identifier] isEqualToString:@"commandResultSegue"]) {
+    seguedToCommandResult = true;
+
+    // Get the new view controller using [segue destinationViewController].
+    CommandResultController *commandsController = [segue destinationViewController];
+    [commandsController setCommandName:[[currentCommandCell textLabel] text] ];
+    NSString *result = [[NSString alloc] initWithData:bleReceiverBuffer encoding:NSUTF8StringEncoding];
+    NSLog(@"bleReceiveBuffer command result %@",result);
+    [commandsController setCommandResult:result ];
+  }
 }
+
 
 
 #pragma mark - UI Action
 
 - (void)invokeCommand:(NSInteger)index {
-  //  CBUUID *commandServiceUUID = [CBUUID UUIDWithString:@SIMPLE_COMMAND_SERVICE_UUID];
-  //  NSArray<CBUUID *> *serviceUUIDs = [NSArray arrayWithObjects:commandServiceUUID, nil];
-  //  [self.ble findServicesFrom:self.peripheral services:serviceUUIDs];
-  //      // enable notification for this characteristic on the peripheral
-  //      [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
 
   SimpleCommand * command = [commands objectAtIndex:index];
   NSData *commandData = [command bleFormat];
 
   [self.navigationItem.backBarButtonItem setEnabled:NO];
-  //
-  // Provide mechanism failure to return data
-  // TODO replace hard-coded seconds above and below with proper programmtic value
-//  [NSTimer scheduledTimerWithTimeInterval:(float)12.0 target:self selector:@selector(commandTimer:) userInfo:nil repeats:NO];
-  
   
   CBUUID *uuid = [CBUUID UUIDWithString:@SIMPLE_COMMAND_INVOKE_CHARACTERISTIC_UUID];
-//  NSData *cmdData = [commandString dataUsingEncoding:NSUTF8StringEncoding];
-//  NSLog(@"commandString = %@",commandString);
+
   [self.ble write:commandData toUUID:uuid];
-  
 }
-
-#pragma mark - Navigation
-
-// In a storyboard-based application, you will often want to do a little preparation before navigation
-//- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-//  if ([[segue identifier] isEqualToString:@"configurationSegue"]) {
-//    NSLog(@"[CommandsController] configurationSegue ");
-//    // Get the new view controller using [segue destinationViewController].
-//    ConfigurationController *cc = [segue destinationViewController];
-//    seguedToCommandResult = true;
-//    [cc setPeripheral:self.peripheral];
-//  }
-//}
-//
-#pragma mark - UI actions
-
-- (IBAction)configure:(id)sender {
-  NSLog(@"configure");
-}
-
-
-/*
- #pragma mark - Navigation
- 
- // In a storyboard-based application, you will often want to do a little preparation before navigation
- - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
- // Get the new view controller using [segue destinationViewController].
- // Pass the selected object to the new view controller.
- }
- */
 
 #pragma mark - BLE delegate
 
@@ -297,42 +255,15 @@
       [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
     }
     
-    // TODO should probably check that notifying worked before sending commands
     if ([c.UUID.UUIDString isEqual:commandInvokeCharacteristicUUID.UUIDString])
     {
       NSLog(@"Invoke characterisitc");
-      
-      //      // enable notification for this characteristic on the peripheral
-      //      [self.ble.activePeripheral setNotifyValue:YES forCharacteristic:c];
-      
-      // We need a list of commands, so issue an inventory command
-      // TODO replace hard-coded seconds above and below with proper programmtic value
-      //      EnvisasCommand * inventoryCommand = [[EnvisasCommand alloc] initWith:INVENTORY argument:@"010" error:NULL];
-      //      NSArray<NSString *> *commandStrings = [inventoryCommand commandStrings];
-      //
-      //      [self.navigationItem.backBarButtonItem setEnabled:NO];
-      //
-      // Provide mechanism failure to return data
-      // TODO replace hard-coded seconds above and below with proper programmtic value
-      //      [NSTimer scheduledTimerWithTimeInterval:(float)12.0 target:self selector:@selector(commandTimer:) userInfo:nil repeats:NO];
-      //
-      
-      // TODO could move this into a method to handle command strings?
-      //      CBUUID *uuid = [CBUUID UUIDWithString:@SIMPLE_COMMAND_INVOKE_CHARACTERISTIC_UUID];
-      //      for (int i = 0; i < [commandStrings count]; i++) {
-      //        NSString *cmdStr = [commandStrings objectAtIndex:i];
-      //        NSData *cmdData = [cmdStr dataUsingEncoding:NSUTF8StringEncoding];
-      //        NSLog(@"cmdStr = %@",cmdStr);
-      //        [self.ble write:cmdData toUUID:uuid];
-      //        /*[NSThread sleepForTimeInterval:0.05];*/
-      //      }
     }
   }
 }
 
 -(void) commandTimer:(NSTimer *)timer
 {
-//  [invokeCommandControl endRefreshing];
   // reset the right bar button
   [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
 }
@@ -343,6 +274,11 @@
   if (characteristic.value) {
     if ([characteristic.value length] > 0)
     {
+
+      // Either get the first chunk of data that will indicate how much is to follow,
+      // or keep adding to the receive buffer until all the expected data has arrived.
+      // TODO should have a timeout in case the data transfer is interrupted or otherwise
+      // fails.
       if (!dataAvailable) {
         NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
         NSLog(@"bleHaveDataFor received %@",cv);
@@ -350,194 +286,25 @@
         if (prefixRange.length > 0) {
           // new data is available
           NSString *countStr = [cv substringFromIndex:(prefixRange.length+1)];
-          NSLog(@"countStr %@",countStr);
           [bleReceiverBuffer setLength:0];
           bleDataCount = [countStr intValue];
-          // ask for some data
-          //                  [self.ble.activePeripheral readValueForCharacteristic:characteristic];
         }
         dataAvailable = true;
-        //        [self.ble.activePeripheral readValueForCharacteristic:characteristic];
       } else {
         NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
         NSLog(@"bleHaveDataFor received %ld bytes",[characteristic.value length]);
         NSLog(@"bleHaveDataFor received %@",cv);
-        //        [bleReceiverBuffer setLength:0];
         [bleReceiverBuffer appendData:characteristic.value];
         NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
         bleDataCount -= [characteristic.value length];
         if (bleDataCount <= 0) {
           NSLog(@"got all data");
-          [self parseResponse:bleReceiverBuffer];
           [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
           dataAvailable = false;
+          // prep for segue to response screen and segue
+          [self performSegueWithIdentifier:@"commandResultSegue" sender:currentCommandCell];
         }
       }
-      //      if (bleDataCount <= 0) {
-      //        NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
-      //        NSLog(@"bleHaveDataFor received %@",cv);
-      //        NSRange prefixRange = [cv rangeOfString:@"dataAvailable" options:(NSAnchoredSearch | NSCaseInsensitiveSearch)];
-      //        if (prefixRange.length > 0) {
-      //          // new data is available
-      //          NSString *countStr = [cv substringFromIndex:(prefixRange.length+1)];
-      //          NSLog(@"countStr %@",countStr);
-      //          [bleReceiverBuffer setLength:0];
-      //          bleDataCount = [countStr intValue];
-      //          // ask for some data
-      //          [self.ble.activePeripheral readValueForCharacteristic:characteristic];
-      //        }
-      //      } else {
-      //        [bleReceiverBuffer appendData:characteristic.value];
-      //        bleDataCount -= [characteristic.value length];
-      //
-      //        if (bleDataCount > 0) {
-      //          // ask for more data
-      //          [self.ble.activePeripheral readValueForCharacteristic:characteristic];
-      //        } else {
-      //          NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
-      //          [self parseResponse:bleReceiverBuffer];
-      //          [scanContentsControl endRefreshing];
-      //          [self.navigationController.navigationItem.backBarButtonItem setEnabled:YES];
-      //        }
-      //      }
-    }
-  }
-}
-
-// TODO Yes, I know that hard coding the key strings is a no-no, but we are maintaining
-// API definitions between two different code bases and there is not much motivation
-// to make it better when my iOS examples are throw-away
-- (void) parseResponse:(NSData *)response
-{
-  // We expect 3 JSON messages in the response, so have to first carve them out
-  NSData * commandResponse;
-  NSData * commandEnd;
-  NSData * commandResult;
-  
-  NSString *temp = [[NSString alloc] initWithData:bleReceiverBuffer encoding:NSUTF8StringEncoding];
-  NSLog(@" temp string = %@",temp);
-  // Each message returned by the reader, command response, command end, and command result,
-  // has as it's last KV pair the coreid. The "data" part of the message may contain a JSON
-  // string, so we have to ignore it, which is done by skipping to the coreid KV
-  NSString *startStr = @"{\"name";
-  NSString *lastKVStr = @"coreid";
-  NSString *endStr = @"\"}";
-  NSRange currentRange = {0, [temp length]};
-  for (int jsonMsgs = 0; jsonMsgs < 1; jsonMsgs++) {
-    // find the start of the JSON message
-    NSRange startRange = [temp rangeOfString:startStr options:NSLiteralSearch range:currentRange];
-    NSLog(@"name range %lu %lu",(unsigned long)startRange.location,(unsigned long)startRange.length);
-    if (startRange.length <= 0) {
-      NSLog(@"Parse error; no starting {\"name");
-      return;
-    }
-    currentRange.location = startRange.location + startRange.length;
-    currentRange.length = [temp length] - currentRange.location;
-    
-    // find the "coreid" key
-    NSRange coreidRange = [temp rangeOfString:lastKVStr options:NSLiteralSearch range:currentRange];
-    NSLog(@"core id range %lu %lu",(unsigned long)coreidRange.location,(unsigned long)coreidRange.length);
-    if (coreidRange.length <= 0) {
-      NSLog(@"Parse error; no closing coreid key");
-      return;
-    }
-    currentRange.location = coreidRange.location + coreidRange.length;
-    currentRange.length = [temp length] - currentRange.location;
-    
-    // finally, find the end of the JSON message
-    NSRange endRange = [temp rangeOfString:endStr options:NSLiteralSearch range:currentRange];
-    NSLog(@"end range %lu %lu",(unsigned long)endRange.location,(unsigned long)endRange.length);
-    if (endRange.length <= 0) {
-      NSLog(@"Parse error; no closing }");
-      return;
-    }
-    currentRange.location = endRange.location + endRange.length;
-    currentRange.length = [temp length] - currentRange.location;
-    // grab the data
-    NSRange subDataRange = {startRange.location, endRange.location + endRange.length - startRange.location};
-    NSData *tempData = [response subdataWithRange:subDataRange];
-    NSLog(@"subDataRange = %ld len %ld",subDataRange.location, subDataRange.length);
-    if (jsonMsgs == 0) commandResponse = [NSData dataWithData:tempData];
-    if (jsonMsgs == 1) commandEnd = [NSData dataWithData:tempData];
-    if (jsonMsgs == 2) commandResult = [NSData dataWithData:tempData];
-  }
-  
-  // TODO for now, check only the response data
-  // TODO should probably refactor this method
-  NSError *error;
-  NSDictionary *respDict = [NSJSONSerialization JSONObjectWithData:commandResponse options:kNilOptions error:&error];
-  if (error)
-  {
-    NSLog(@"response is not JSON");
-    if ([error code] == NSPropertyListReadCorruptError)
-      NSLog(@"Error code is NSPropertyListReadCorruptError");
-  }
-  else {
-    if ([NSJSONSerialization isValidJSONObject:respDict])
-    {
-      NSLog(@"got a valid JSON object");
-      // "name" key always refers to a string, so no need to check
-      NSString *name = [respDict valueForKey:@"name"];
-      NSLog(@"name = %@",name);
-      
-      // check for commands list
-      if ([name compare:@"inventory"] == 0) {
-        // inventory messages are either JSON arrays or strings
-        NSObject *value = [respDict valueForKey:@"data"];
-        if (value != nil && value != [NSNull null]) {
-          if ([value isKindOfClass:[NSString class]])
-          {
-            NSString *invString = (NSString *) value;
-            NSLog(@"invString = %@",invString);
-            NSData *dataData = [invString dataUsingEncoding:NSUTF8StringEncoding];
-            NSDictionary *dataDict = [NSJSONSerialization JSONObjectWithData:dataData options:kNilOptions error:&error];
-            if (error)
-            {
-              NSLog(@"data is not JSON");
-              if ([error code] == NSPropertyListReadCorruptError)
-                NSLog(@"Error code is NSPropertyListReadCorruptError");
-            }
-            NSLog(@"data is JSON");
-            NSObject *commandsValue = [dataDict valueForKey:@"commands"];
-            if (commandsValue != nil && commandsValue != [NSNull null]) {
-              NSLog(@"check for commands");
-              if ([commandsValue isKindOfClass:[NSArray class]])
-              {
-                NSLog(@"commands parses to commands array");
-                NSArray *data = (NSArray *) commandsValue;
-                [commands removeAllObjects];
-                NSLog(@"data contains %d commands:",[data count]);
-                for (int i=0; i < [data count]; i++)
-                {
-                  [commands addObject:[data objectAtIndex:i]];
-                  NSLog(@"  %@",[data objectAtIndex:i]);
-                }
-                [self.tableView reloadData];
-              }
-            }
-            //            if ([invString componentsSeparatedByString:@"end"] == 0)
-            //            {
-            //              NSLog(@"No more commands...");
-            //              return;
-            //            }
-          }
-          //          NSLog(@"check for array");
-          //          if ([value isKindOfClass:[NSArray class]])
-          //          {
-          //            NSLog(@"commands parses to array");
-          //            NSArray *data = (NSArray *) value;
-          //            [commands removeAllObjects];
-          //            NSLog(@"data contains :");
-          //            for (int i=0; i < [data count]; i++)
-          //            {
-          //              [commands addObject:[data objectAtIndex:i]];
-          //              NSLog(@"  %@",[data objectAtIndex:i]);
-          //            }
-          //            [self.tableView reloadData];
-          //          } // if array
-        }
-      } // name is "inventory"
-      
     }
   }
 }

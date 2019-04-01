@@ -140,7 +140,6 @@
   }
 }
 
-
 #pragma mark - UI actions
 
 - (IBAction)refreshPeripherals:(id)sender {
@@ -234,9 +233,9 @@
 }
 
 // When connected, this will be called
-//-(void) bleDidConnect
-//{
-//}
+-(void) bleDidConnect
+{
+}
 
 - (void)bleDidDisconnect
 {
@@ -244,9 +243,9 @@
 }
 
 // When RSSI is changed, this will be called
-//-(void) bleDidUpdateRSSI:(NSNumber *) rssi
-//{
-//}
+-(void) bleDidUpdateRSSI:(NSNumber *) rssi
+{
+}
 
 //-(void) readRSSITimer:(NSTimer *)timer
 //{

@@ -20,6 +20,7 @@
 		7AD760BB1FF6D07A00AB0541 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AD760BA1FF6D07A00AB0541 /* main.m */; };
 		7AD760C41FF6D11F00AB0541 /* BLE.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AD760C21FF6D11F00AB0541 /* BLE.m */; };
 		7AE137921FFFF72D00BACB04 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AE137911FFFF72D00BACB04 /* SystemConfiguration.framework */; };
+		7AE756292252B46E00E926CF /* CommandResultController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AE756282252B46E00E926CF /* CommandResultController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +49,8 @@
 		7AD760C21FF6D11F00AB0541 /* BLE.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BLE.m; sourceTree = "<group>"; };
 		7AD760C31FF6D11F00AB0541 /* BLE.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BLE.h; sourceTree = "<group>"; };
 		7AE137911FFFF72D00BACB04 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		7AE756272252B46E00E926CF /* CommandResultController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CommandResultController.h; sourceTree = "<group>"; };
+		7AE756282252B46E00E926CF /* CommandResultController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CommandResultController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +112,8 @@
 				7A9D24C92242E72800D1E498 /* CommandsController.m */,
 				7AC151D422441E330057174E /* CommandsTableViewCell.h */,
 				7AC151D522441E330057174E /* CommandsTableViewCell.m */,
+				7AE756272252B46E00E926CF /* CommandResultController.h */,
+				7AE756282252B46E00E926CF /* CommandResultController.m */,
 				7AC4BC7C1FFA5C9C00AE7C8E /* PeripheralsController.h */,
 				7AC4BC7D1FFA5C9C00AE7C8E /* PeripheralsController.m */,
 				7AC4BC7F1FFAC9D700AE7C8E /* PeripheralsTableViewCell.h */,
@@ -215,6 +220,7 @@
 				7AD760AA1FF6D07A00AB0541 /* AppDelegate.m in Sources */,
 				7AD760BB1FF6D07A00AB0541 /* main.m in Sources */,
 				7A48938C200730D500DBF741 /* BLEUtils.m in Sources */,
+				7AE756292252B46E00E926CF /* CommandResultController.m in Sources */,
 				7A9D24CA2242E72800D1E498 /* CommandsController.m in Sources */,
 				7AD760C41FF6D11F00AB0541 /* BLE.m in Sources */,
 				7AC4BC811FFAC9D700AE7C8E /* PeripheralsTableViewCell.m in Sources */,

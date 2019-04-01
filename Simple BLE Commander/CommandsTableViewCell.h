@@ -18,6 +18,5 @@
 @interface CommandsTableViewCell : UITableViewCell
 
 @property (nonatomic, assign) NSInteger commandID;
-//@property (weak, nonatomic) CBPeripheral *peripheral;
 
 @end
