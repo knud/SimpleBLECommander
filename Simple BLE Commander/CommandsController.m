@@ -292,7 +292,7 @@
         dataAvailable = true;
       } else {
         NSString *cv = [[NSString alloc] initWithData:characteristic.value encoding:NSUTF8StringEncoding];
-        NSLog(@"bleHaveDataFor received %ld bytes",[characteristic.value length]);
+        NSLog(@"bleHaveDataFor received %ld bytes",(unsigned long)[characteristic.value length]);
         NSLog(@"bleHaveDataFor received %@",cv);
         [bleReceiverBuffer appendData:characteristic.value];
         NSLog(@" --------- received %lu bytes",(unsigned long)[bleReceiverBuffer length]);
